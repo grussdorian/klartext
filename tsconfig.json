@@ -6,8 +6,10 @@
     },
     "esModuleInterop": true,
     "jsx": "react",
-    "lib": ["dom", "es2015"]
+    "lib": ["dom", "es2015"],
+    
   }
 }
+
 
 
