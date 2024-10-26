@@ -24,7 +24,10 @@ const TextSimplifier = () => {
   const [rating, setRating] = useState(5);
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   const audienceOptions = [
     { value: "scientists", label: "Scientists and Researchers" },
     { value: "students", label: "Students and Academics" },
@@ -33,22 +36,30 @@ const TextSimplifier = () => {
     { value: "general", label: "General Public (Non-Expert)" },
   ];
 
-  // const simplifyText = async () => {
-  //   setIsLoading(true);
-  //   setError('');
-  //   try {
+  const handleFileChange = (event) => {
+    setUploadedFile(event.target.files[0]);
+  };
 
-  //     await new Promise(resolve => setTimeout(resolve, 1500));
-  //     setSimplifiedText(
-  //       `This is a simplified version of your text for ${
-  //         audienceOptions.find(opt => opt.value === audience).label
-  //       }. [Sample output would be here based on LLM response]`
-  //     );
-  //   } catch (err) {
-  //     setError('Failed to simplify text. Please try again.');
-  //   }
-  //   setIsLoading(false);
-  // };
+  const uploadFile = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("audience", audience);
+
+      const response = await axios.post("http://localhost:7171/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setSimplifiedText(response.data.simplifiedText);
+    } catch (err) {
+      setError("Failed to simplify text. Please try again.");
+    }
+    setIsLoading(false);
+  };
 
   const simplifyText = async () => {
     setIsLoading(true);
@@ -135,19 +146,16 @@ const TextSimplifier = () => {
       alert('Failed to send rating.');
     }
   };
-  
+
   const containerStyle = {
     width: "32rem",
     // marginLeft: isSidebarOpen ? '0': '32rem'
     marginLeft: "auto",
   };
+
   return (
     <div className="flex h-screen max-h-screen">
-      <div
-        className="flex-1 p-4 overflow-auto"
-        id="main-container"
-        style={containerStyle}
-      >
+      <div className="flex-1 p-4 overflow-auto" id="main-container" style={containerStyle}>
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Text Simplification Tool</CardTitle>
@@ -169,24 +177,27 @@ const TextSimplifier = () => {
                 Upload Document
               </Button>
             </div>
-
-            {inputMethod === "text" ? (
-              <textarea
-                className="w-full h-32 p-2 border rounded-md mb-4 bg-blue-50 text-gray-800 placeholder-gray-400 border-blue-200 focus:border-blue-400 focus:ring-blue-300 focus:ring-2 focus:outline-none"
-                placeholder="Enter text to simplify..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-              />
-            ) : (
-              <div className="border-2 border-dashed rounded-md p-8 text-center mb-4">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-                <p>Drag and drop a file or click to upload</p>
-                <p className="text-sm text-gray-500">
-                  Supported formats: PDF, DOC, DOCX
-                </p>
-              </div>
-            )}
-
+  
+            {/* Conditionally render input components below the buttons */}
+            <div className="mb-4">
+              {inputMethod === "text" ? (
+                <textarea
+                  className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800 placeholder-gray-400 border-blue-200 focus:border-blue-400 focus:ring-blue-300 focus:ring-2 focus:outline-none"
+                  placeholder="Enter text to simplify..."
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                />
+              ) : (
+                <div className="border-2 border-dashed rounded-md p-8 text-center">
+                  <input type="file" onChange={handleFileChange} />
+                  <Button onClick={uploadFile} disabled={isLoading || !uploadedFile} className="mt-4">
+                    {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Choose a file
+                  </Button>
+                </div>
+              )}
+            </div>
+  
             <div className="mb-4">
               <Select value={audience} onValueChange={setAudience}>
                 <SelectTrigger>
@@ -201,15 +212,9 @@ const TextSimplifier = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <Button
-              onClick={simplifyText}
-              disabled={isLoading || !inputText}
-              className="w-full"
-            >
-              {isLoading ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
+  
+            <Button onClick={simplifyText} disabled={isLoading || !inputText} className="w-full">
+              {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
               Simplify Text
             </Button>
           </CardContent>
@@ -252,8 +257,8 @@ const TextSimplifier = () => {
                   />
                   <span className="font-bold">{rating}/10</span>
                   <Button onClick={sendRating} className="ml-4">
-                  Send Rating
-                </Button>
+                    Send Rating
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -275,9 +280,8 @@ const TextSimplifier = () => {
 
       {/* Retractable Sidebar */}
       <div
-        className={`fixed top-0 right-0 w-72 h-full bg-gray-50 p-4 border-l shadow-lg overflow-auto transform transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 w-72 h-full bg-gray-50 p-4 border-l shadow-lg overflow-auto transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <h3 className="font-bold mb-4">Definitions & Synonyms</h3>
         {sidebarEntries.map((entry) => (
