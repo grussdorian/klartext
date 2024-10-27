@@ -68,67 +68,77 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
 
 };
 
-app.post("/upload", upload.single("file"), async (req: Request, res: Response) => {
-  const audience = req.body.audience as AudienceGroup;
-  const file = req.file;
-
-  if (!file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-
-  let extractedText: string;
-  try {
-    if (file.mimetype === "application/pdf") {
-      extractedText = await extractTextFromPdf(file.buffer);
-    } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      extractedText = await extractTextFromWord(file.buffer);
-    } else {
-      return res.status(400).json({ error: "Unsupported file type" });
-    }
-
-    const simplifiedText = await simplifyText(extractedText, audience);
-    res.json({ simplifiedText });
-  } catch (error) {
-    res.status(500).json({ error: "Error processing file" });
-  }
-});
-
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
   const audience = req.body.audience as AudienceGroup;
   const text = req.body.text as string;
+  const file = req.file;
+
+  if (!file && !text) {
+    return res.status(400).json({ error: "No text or file provided for simplification." });
+  }
 
   let extractedText = text;
 
-  try {
-    const file = req.file;
-
-    if (file) {
+  if (file) {
+    try {
       if (file.mimetype === 'application/pdf') {
-        extractedText = await extractTextFromPdf(file.buffer); // Pass the buffer directly
+        extractedText = await extractTextFromPdf(file.buffer);
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        extractedText = await extractTextFromWord(file.buffer); // Pass the buffer directly
+        extractedText = await extractTextFromWord(file.buffer);
       } else {
         return res.status(400).json({ error: "Unsupported file type" });
       }
+    } catch (error) {
+      return res.status(500).json({ error: "Error processing file" });
     }
+  }
 
+  try {
     const simplifiedText = await simplifyText(extractedText, audience);
     res.json({ simplifiedText });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    res.status(500).json({ error: "Error simplifying text" });
+    res.status(500).json({ error: "Error during text simplification" });
   }
 });
 
 
-app.get('/', (req: Request, res: Response) => {
-  res.send('<h1>Server Working</h1>');
+app.get('/word-info', async (req: Request, res: Response) => {
+  const word = req.query.word as string;
+
+  if (!word) {
+    return res.status(400).json({ error: "No word provided" });
+  }
+
+  try {
+    const definitionResponse = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    const synonymResponse = await axios.get(`https://api.datamuse.com/words?rel_syn=${word}`);
+
+    const definition = definitionResponse.data[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found";
+    const synonyms = synonymResponse.data.map((syn: { word: string }) => syn.word) || ["No synonyms found"];
+
+    res.json({ word, definition, synonyms });
+  } catch (error) {
+    console.error("Error fetching word info:", error);
+    res.status(500).json({ error: "Error fetching word information" });
+  }
 });
 
+
+// Rating
 app.post('/rating', (req: Request, res: Response) => {
-  const rating = req.query.rating as string;
+  const rating = parseInt(req.query.rating as string, 10);
+
+  if (isNaN(rating) || rating < 1 || rating > 10) {
+    return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
+  }
+
   console.log("User rated:", rating);
-  res.status(200).send();
+  // Future: Save rating to a database if needed
+  res.status(200).json({ message: "Rating submitted successfully" });
+});
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('<h1>Server Working</h1>');
 });
 
 app.listen(port, () => {

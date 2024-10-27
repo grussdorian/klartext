@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 
+
+
 // Function to read a PDF file and extract text
 export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {   
     try {

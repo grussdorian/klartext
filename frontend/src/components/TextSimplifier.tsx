@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Upload, Book, X, Info, RefreshCw, ThumbsUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -11,7 +11,18 @@ import {
 } from "./ui/select";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Slider } from "./ui/slider";
+import Sidebar from "./ui/Sidebar";
 import axios from "axios";
+
+const audienceOptions = [
+  { value: "scientists", label: "Scientists and Researchers" },
+  { value: "students", label: "Students and Academics" },
+  { value: "industry", label: "Industry Professionals" },
+  { value: "journalists", label: "Journalists and Media Professionals" },
+  { value: "general", label: "General Public (Non-Expert)" },
+];
+
+const BASE_URL = "http://localhost:7171";
 
 const TextSimplifier = () => {
   const [inputMethod, setInputMethod] = useState("text");
@@ -25,105 +36,69 @@ const TextSimplifier = () => {
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [synonymToReplace, setSynonymToReplace] = useState(null);
+
+
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
-  const audienceOptions = [
-    { value: "scientists", label: "Scientists and Researchers" },
-    { value: "students", label: "Students and Academics" },
-    { value: "industry", label: "Industry Professionals" },
-    { value: "journalists", label: "Journalists and Media Professionals" },
-    { value: "general", label: "General Public (Non-Expert)" },
-  ];
+  const handleFileChange = (event) => setUploadedFile(event.target.files[0]);
 
-  const handleFileChange = (event) => {
-    setUploadedFile(event.target.files[0]);
-  };
-
-  const uploadFile = async () => {
+  const handleSimplifyText = async () => {
     setIsLoading(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("file", uploadedFile);
-      formData.append("audience", audience);
-
-      const response = await axios.post("http://localhost:7171/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      setSimplifiedText(response.data.simplifiedText);
-    } catch (err) {
-      setError("Failed to simplify text. Please try again.");
-    }
-    setIsLoading(false);
-  };
-
-  const simplifyText = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const audienceLabel = audienceOptions.find(
-        (opt) => opt.value === audience
-      ).label;
-      const response = await axios.post("http://localhost:7171/simplify", {
+      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const response = await axios.post(`${BASE_URL}/simplify`, {
         text: inputText,
         audience: audienceLabel,
       });
-
       setSimplifiedText(response.data.simplifiedText);
-    } catch (err) {
+    } catch {
       setError("Failed to simplify text. Please try again.");
     }
     setIsLoading(false);
   };
 
-  function removeNonAlphabetic(str) {
-    return str.replace(/[^a-zA-Z\s]/g, ""); // Remove non-alphabetic characters
-  }
+  const handleUploadFile = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("audience", audienceLabel);
+
+      const response = await axios.post(`${BASE_URL}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setSimplifiedText(response.data.simplifiedText);
+    } catch {
+      setError("Failed to simplify text. Please try again.");
+    }
+    setIsLoading(false);
+  };
 
   const handleWordClick = useCallback(
-    async (word_uncleaned) => {
-      setIsSidebarOpen(true); // Open sidebar when a word is clicked
-      const word = removeNonAlphabetic(word_uncleaned).toLowerCase();
-      console.log("Word clicked:", word);
-      if (!sidebarEntries.find((entry) => entry.word === word)) {
+    async (word) => {
+      setIsSidebarOpen(true);
+      const cleanWord = word.replace(/[^a-zA-Z\s]/g, "").toLowerCase();
+
+      if (!sidebarEntries.some((entry) => entry.word === cleanWord)) {
         try {
-          const definitionResponse = await axios.get(
-            `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
-          );
-          const definition =
-            definitionResponse.status === 200
-              ? definitionResponse.data[0].meanings[0].definitions[0].definition
-              : "Definition not found.";
-
-          const synonymResponse = await axios.get(
-            `https://api.datamuse.com/words?rel_syn=${word}`
-          );
-          const synonyms =
-            synonymResponse.status === 200 && synonymResponse.data.length > 0
-              ? synonymResponse.data.map((syn) => syn.word)
-              : ["Synonym not found."];
-
-          setSidebarEntries((prev) => [
-            ...prev,
-            {
-              word,
-              definition,
-              synonyms,
-            },
+          const [{ data: definitionData }, { data: synonymsData }] = await Promise.all([
+            axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
+            axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
           ]);
-        } catch (error) {
-          console.error("Error fetching word info:", error);
+
+          const definition = definitionData[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found.";
+          const synonyms = synonymsData.length ? synonymsData.map((syn) => syn.word) : ["No synonyms found."];
+
+          setSidebarEntries((prev) => [...prev, { word: cleanWord, definition, synonyms }]);
+        } catch {
           setSidebarEntries((prev) => [
             ...prev,
-            {
-              word,
-              definition: "Error fetching definition.",
-              synonyms: ["Error fetching synonyms."],
-            },
+            { word: cleanWord, definition: "Error fetching definition.", synonyms: ["Error fetching synonyms."] },
           ]);
         }
       }
@@ -135,69 +110,83 @@ const TextSimplifier = () => {
     setSidebarEntries((prev) => prev.filter((entry) => entry.word !== word));
   };
 
-  const sendRating = async () => {
+  const handleRatingSubmit = async () => {
     try {
-      await axios.post('http://localhost:7171/rating', null, {
-        params: { rating }
-      });
-      alert('Rating sent successfully!');
-    } catch (error) {
-      console.error('Error sending rating:', error);
-      alert('Failed to send rating.');
+      await axios.post(`${BASE_URL}/rating`, null, { params: { rating } });
+      alert("Rating sent successfully!");
+    } catch {
+      alert("Failed to send rating.");
     }
   };
 
-  const containerStyle = {
-    width: "32rem",
-    // marginLeft: isSidebarOpen ? '0': '32rem'
-    marginLeft: "auto",
-  };
+  const renderInputSection = () => (
+    <div className="mb-4">
+      {inputMethod === "text" ? (
+        <textarea
+          className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800"
+          placeholder="Enter text to simplify..."
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+        />
+      ) : (
+        <div className="border-2 border-dashed rounded-md p-8 text-center">
+          <input type="file" onChange={handleFileChange} />
+          <Button onClick={handleUploadFile} disabled={isLoading || !uploadedFile} className="mt-4">
+            {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+            Upload Document
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  //   if (selectedWord) {
+  //     const updatedText = simplifiedText.replace(new RegExp(`\\b${selectedWord}\\b`, "g"), synonym);
+  //     console.log(selectedWord)
+  //     console.log(updatedText)
+  //     setSimplifiedText(updatedText);
+  //     setSelectedWord(null);
+  //   }
+
+    // New useEffect to handle word replacement
+    useEffect(() => {
+      if (selectedWord && synonymToReplace) {
+        setSimplifiedText((prevText) =>
+          prevText.replace(new RegExp(`\\b${selectedWord}\\b`, "g"), synonymToReplace)
+        );
+        setSelectedWord(null); // Reset to allow for further replacements
+        setSynonymToReplace(null); // Clear after replacement
+      }
+    }, [selectedWord, synonymToReplace]);
+  
+    // Function triggered when a synonym is clicked
+    const handleSynonymClick = (synonym) => {
+      setSynonymToReplace(synonym);
+    };
 
   return (
     <div className="flex h-screen max-h-screen">
-      <div className="flex-1 p-4 overflow-auto" id="main-container" style={containerStyle}>
+      <div className="flex-1 p-4 overflow-auto" style={{ width: "32rem", marginLeft: "auto" }}>
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Text Simplification Tool</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4 mb-4">
-              <Button
-                variant={inputMethod === "text" ? "default" : "outline"}
-                onClick={() => setInputMethod("text")}
-              >
-                <Book className="mr-2 h-4 w-4" />
-                Text Input
-              </Button>
-              <Button
-                variant={inputMethod === "upload" ? "default" : "outline"}
-                onClick={() => setInputMethod("upload")}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
-              </Button>
+              {["text", "upload"].map((method) => (
+                <Button
+                  key={method}
+                  variant={inputMethod === method ? "default" : "outline"}
+                  onClick={() => setInputMethod(method)}
+                >
+                  {method === "text" ? <Book className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
+                  {method === "text" ? "Text Input" : "Upload Document"}
+                </Button>
+              ))}
             </div>
-  
-            {/* Conditionally render input components below the buttons */}
-            <div className="mb-4">
-              {inputMethod === "text" ? (
-                <textarea
-                  className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800 placeholder-gray-400 border-blue-200 focus:border-blue-400 focus:ring-blue-300 focus:ring-2 focus:outline-none"
-                  placeholder="Enter text to simplify..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                />
-              ) : (
-                <div className="border-2 border-dashed rounded-md p-8 text-center">
-                  <input type="file" onChange={handleFileChange} />
-                  <Button onClick={uploadFile} disabled={isLoading || !uploadedFile} className="mt-4">
-                    {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Choose a file
-                  </Button>
-                </div>
-              )}
-            </div>
-  
+
+            {renderInputSection()}
+
             <div className="mb-4">
               <Select value={audience} onValueChange={setAudience}>
                 <SelectTrigger>
@@ -212,9 +201,9 @@ const TextSimplifier = () => {
                 </SelectContent>
               </Select>
             </div>
-  
-            <Button onClick={simplifyText} disabled={isLoading || !inputText} className="w-full">
-              {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
+
+            <Button onClick={handleSimplifyText} disabled={isLoading || !inputText} className="w-full">
+              {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
               Simplify Text
             </Button>
           </CardContent>
@@ -234,11 +223,7 @@ const TextSimplifier = () => {
             <CardContent>
               <div className="p-4 bg-gray-50 rounded-md mb-4">
                 {simplifiedText.split(" ").map((word, index) => (
-                  <span
-                    key={index}
-                    className="hover:bg-blue-100 cursor-pointer px-1 rounded"
-                    onClick={() => handleWordClick(word)}
-                  >
+                  <span key={index} className="hover:bg-blue-100 cursor-pointer" onClick={() => handleWordClick(word)}>
                     {word}{" "}
                   </span>
                 ))}
@@ -247,16 +232,9 @@ const TextSimplifier = () => {
               <div className="mt-4">
                 <p className="mb-2">How helpful was this simplification?</p>
                 <div className="flex items-center gap-4">
-                  <Slider
-                    value={[rating]}
-                    onValueChange={(value) => setRating(value[0])}
-                    max={10}
-                    min={1}
-                    step={1}
-                    className="w-64"
-                  />
+                  <Slider value={[rating]} onValueChange={(val) => setRating(val[0])} max={10} min={1} step={1} />
                   <span className="font-bold">{rating}/10</span>
-                  <Button onClick={sendRating} className="ml-4">
+                  <Button onClick={handleRatingSubmit} className="ml-4">
                     Send Rating
                   </Button>
                 </div>
@@ -266,65 +244,16 @@ const TextSimplifier = () => {
         )}
       </div>
 
-      {/* Sidebar toggle button */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded-full shadow-md hover:bg-blue-600 z-50"
-      >
-        {isSidebarOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <Info className="h-6 w-6" />
-        )}
-      </button>
+      <Sidebar
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        sidebarEntries={sidebarEntries}
+        removeSidebarEntry={removeSidebarEntry}
+        handleWordClick={handleWordClick}
+        handleSynonymClick={handleSynonymClick}
+        setSelectedWord={setSelectedWord}
+      />
 
-      {/* Retractable Sidebar */}
-      <div
-        className={`fixed top-0 right-0 w-72 h-full bg-gray-50 p-4 border-l shadow-lg overflow-auto transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-      >
-        <h3 className="font-bold mb-4">Definitions & Synonyms</h3>
-        {sidebarEntries.map((entry) => (
-          <div
-            key={entry.word}
-            className="mb-4 bg-white p-3 rounded-md shadow-sm"
-          >
-            <div className="flex justify-between items-center mb-2">
-              <strong>{entry.word}</strong>
-              <button
-                onClick={() => removeSidebarEntry(entry.word)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-sm mb-2">
-              <strong>Definition:</strong>{" "}
-              {entry.definition.split(" ").map((word, index) => (
-                <span
-                  key={index}
-                  className="hover:bg-blue-100 cursor-pointer px-1 rounded"
-                  onClick={() => handleWordClick(word)}
-                >
-                  {word}{" "}
-                </span>
-              ))}
-            </p>
-            <p className="text-sm">
-              <strong>Synonyms:</strong>{" "}
-              {entry.synonyms.map((synonym, index) => (
-                <span
-                  key={index}
-                  className="hover:bg-blue-100 cursor-pointer px-1 rounded"
-                  onClick={() => handleWordClick(synonym)}
-                >
-                  {synonym}{" "}
-                </span>
-              ))}
-            </p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
