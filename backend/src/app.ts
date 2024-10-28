@@ -85,6 +85,8 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
         extractedText = await extractTextFromPdf(file.buffer);
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         extractedText = await extractTextFromWord(file.buffer);
+      } else if (file.mimetype === 'text/plain') { 
+        extractedText = file.buffer.toString('utf-8'); 
       } else {
         return res.status(400).json({ error: "Unsupported file type" });
       }
@@ -127,12 +129,13 @@ app.get('/word-info', async (req: Request, res: Response) => {
 // Rating
 app.post('/rating', (req: Request, res: Response) => {
   const rating = parseInt(req.query.rating as string, 10);
-
+  const feedback = req.query.feedback
   if (isNaN(rating) || rating < 1 || rating > 10) {
     return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
   }
 
   console.log("User rated:", rating);
+  console.log("User feedback: ", feedback)
   // Future: Save rating to a database if needed
   res.status(200).json({ message: "Rating submitted successfully" });
 });

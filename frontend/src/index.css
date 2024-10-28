@@ -19,7 +19,7 @@
 
 
 #main-container {
-  width: 80%;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -34,7 +34,7 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
+  /* display: flex; */
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
@@ -140,4 +140,24 @@ button:focus-visible {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
+
+.simplified-text {
+  line-height: 1.6;
+}
+
+.highlight-sentence {
+  background-color: #e0f7fa; /* Light blue for sentence */
+  cursor: pointer;
+}
+
+.highlight-word {
+  background-color: #fff59d; /* Yellow for word */
+  cursor: pointer;
 }

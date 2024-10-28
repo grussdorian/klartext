@@ -60,7 +60,7 @@ const InputSection = ({
     )}
     
     <Button 
-      onClick={handleSimplifyText} 
+      onClick={uploadedFile ? handleUploadFile : handleSimplifyText} 
       disabled={isLoading || !(inputText || uploadedFile)}  // Enable button if either text or file is present
       className="w-full mt-4"
     >

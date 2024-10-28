@@ -21,6 +21,7 @@ const TextSimplifier = () => {
   const [furtherSimplifiedText, setFurtherSimplifiedText] = useState("");
   const [sidebarEntries, setSidebarEntries] = useState([]);
   const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState('');
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -51,7 +52,7 @@ const TextSimplifier = () => {
       formData.append("file", uploadedFile);
       formData.append("audience", audienceLabel);
 
-      const response = await axios.post(`${BASE_URL}/upload`, formData, {
+      const response = await axios.post(`${BASE_URL}/simplify`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setSimplifiedText(response.data.simplifiedText);
@@ -94,10 +95,11 @@ const TextSimplifier = () => {
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
-  const handleRatingSubmit = async () => {
+  const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/rating`, null, { params: { rating } });
-      alert("Rating sent successfully!");
+      await axios.post(`${BASE_URL}/rating`, null, { params: { rating, feedback } });
+      alert("Rating and feedback sent successfully!");
+      setFeedback(''); // Clear feedback after submission
     } catch {
       alert("Failed to send rating.");
     }
@@ -108,7 +110,7 @@ const TextSimplifier = () => {
     if (selectedWord && synonymToReplace) {
       const highlightedText = simplifiedText.replace(
         new RegExp(`\\b${selectedWord}\\b`, "g"),
-        `<span class="highlight">${synonymToReplace}</span>`
+        synonymToReplace
       );
 
       setSimplifiedText(highlightedText);
@@ -157,11 +159,11 @@ const TextSimplifier = () => {
   };
 
   return (
-    <div className="flex h-screen max-h-screen">
-      <div className="flex-1 p-4 overflow-auto" style={{ width: "32rem", marginLeft: "auto" }}>
+    <div className="flex h-screen justify-center items-start"> {/* Ensure content is centered */}
+      <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Text Simplification Tool</CardTitle>
+            <CardTitle>Klartext: AI-based Translation of Websites Into Plain Language</CardTitle>
           </CardHeader>
           <CardContent>
             <InputSection
@@ -203,15 +205,15 @@ const TextSimplifier = () => {
               </div>
             )}
 
-
             <RatingSection
               rating={rating}
               setRating={setRating}
-              handleRatingSubmit={handleRatingSubmit}
+              handleFeedbackSubmit={handleFeedbackSubmit}
+              feedback={feedback}
+              setFeedback={setFeedback}
             />
           </CardContent>
         </Card>
-
       </div>
 
       <Sidebar
@@ -223,9 +225,11 @@ const TextSimplifier = () => {
         handleSynonymClick={handleSynonymClick}
         setSelectedWord={setSelectedWord}
       />
-
     </div>
   );
+
+
+
 };
 
 export default TextSimplifier;
