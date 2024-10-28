@@ -1,28 +1,14 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Upload, Book, X, Info, RefreshCw, ThumbsUp } from "lucide-react";
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Alert, AlertDescription } from "./ui/alert";
-import { Slider } from "./ui/slider";
 import Sidebar from "./ui/Sidebar";
-import axios from "axios";
-
-const audienceOptions = [
-  { value: "scientists", label: "Scientists and Researchers" },
-  { value: "students", label: "Students and Academics" },
-  { value: "industry", label: "Industry Professionals" },
-  { value: "journalists", label: "Journalists and Media Professionals" },
-  { value: "general", label: "General Public (Non-Expert)" },
-];
-
-const BASE_URL = "http://localhost:7171";
+import { audienceOptions, BASE_URL } from "../utils/constants";
+import InputSection from "./InputSection";
+import AudienceSelector from "./TargetAudience";
+import SimplifiedText from "./OutputSection";
+import RatingSection from "./RatingSection";
+import { Alert } from "./ui/alert";
 
 const TextSimplifier = () => {
   const [inputMethod, setInputMethod] = useState("text");
@@ -31,18 +17,14 @@ const TextSimplifier = () => {
   const [simplifiedText, setSimplifiedText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedWord, setSelectedWord] = useState(null);
+  const [selectedSentence, setSelectedSentence] = useState("");
+  const [furtherSimplifiedText, setFurtherSimplifiedText] = useState("");
   const [sidebarEntries, setSidebarEntries] = useState([]);
   const [rating, setRating] = useState(5);
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [synonymToReplace, setSynonymToReplace] = useState(null);
-
-
-
-  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
-
-  const handleFileChange = (event) => setUploadedFile(event.target.files[0]);
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
@@ -110,6 +92,8 @@ const TextSimplifier = () => {
     setSidebarEntries((prev) => prev.filter((entry) => entry.word !== word));
   };
 
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   const handleRatingSubmit = async () => {
     try {
       await axios.post(`${BASE_URL}/rating`, null, { params: { rating } });
@@ -119,50 +103,58 @@ const TextSimplifier = () => {
     }
   };
 
-  const renderInputSection = () => (
-    <div className="mb-4">
-      {inputMethod === "text" ? (
-        <textarea
-          className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800"
-          placeholder="Enter text to simplify..."
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-        />
-      ) : (
-        <div className="border-2 border-dashed rounded-md p-8 text-center">
-          <input type="file" onChange={handleFileChange} />
-          <Button onClick={handleUploadFile} disabled={isLoading || !uploadedFile} className="mt-4">
-            {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-            Upload Document
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+  // New useEffect to handle word replacement
+  useEffect(() => {
+    if (selectedWord && synonymToReplace) {
+      const highlightedText = simplifiedText.replace(
+        new RegExp(`\\b${selectedWord}\\b`, "g"),
+        `<span class="highlight">${synonymToReplace}</span>`
+      );
 
-  //   if (selectedWord) {
-  //     const updatedText = simplifiedText.replace(new RegExp(`\\b${selectedWord}\\b`, "g"), synonym);
-  //     console.log(selectedWord)
-  //     console.log(updatedText)
-  //     setSimplifiedText(updatedText);
-  //     setSelectedWord(null);
-  //   }
+      setSimplifiedText(highlightedText);
+      setSelectedWord(null);
+      setSynonymToReplace(null);
+    }
+  }, [selectedWord, synonymToReplace, simplifiedText]);
 
-    // New useEffect to handle word replacement
-    useEffect(() => {
-      if (selectedWord && synonymToReplace) {
-        setSimplifiedText((prevText) =>
-          prevText.replace(new RegExp(`\\b${selectedWord}\\b`, "g"), synonymToReplace)
-        );
-        setSelectedWord(null); // Reset to allow for further replacements
-        setSynonymToReplace(null); // Clear after replacement
-      }
-    }, [selectedWord, synonymToReplace]);
-  
-    // Function triggered when a synonym is clicked
-    const handleSynonymClick = (synonym) => {
-      setSynonymToReplace(synonym);
-    };
+  // Function triggered when a synonym is clicked
+  const handleSynonymClick = (synonym) => {
+    setSynonymToReplace(synonym);
+  };
+
+  // Handle sentence double-click
+  const handleSentenceClick = (sentence) => {
+    setSelectedSentence(sentence);
+  };
+
+  // Function to further simplify the selected sentence
+  const handleFurtherSimplification = async () => {
+    if (!selectedSentence) return;
+
+    setIsLoading(true);
+    setError("");
+    try {
+      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const response = await axios.post(`${BASE_URL}/simplify`, {
+        text: selectedSentence,
+        audience: audienceLabel,
+      });
+      setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
+    } catch {
+      setError("Failed to simplify the selected sentence. Please try again.");
+    }
+    setIsLoading(false);
+  };
+
+  // Function to replace the selected sentence with the further simplified sentence
+  const handleUpdateSimplifiedText = () => {
+    if (!selectedSentence || !furtherSimplifiedText) return;
+
+    const updatedText = simplifiedText.replace(selectedSentence, furtherSimplifiedText);
+    setSimplifiedText(updatedText); // Update the main simplified text
+    setFurtherSimplifiedText(""); // Clear the further simplified text
+    setSelectedSentence(""); // Clear the selected sentence
+  };
 
   return (
     <div className="flex h-screen max-h-screen">
@@ -172,76 +164,54 @@ const TextSimplifier = () => {
             <CardTitle>Text Simplification Tool</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 mb-4">
-              {["text", "upload"].map((method) => (
-                <Button
-                  key={method}
-                  variant={inputMethod === method ? "default" : "outline"}
-                  onClick={() => setInputMethod(method)}
-                >
-                  {method === "text" ? <Book className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
-                  {method === "text" ? "Text Input" : "Upload Document"}
-                </Button>
-              ))}
-            </div>
+            <InputSection
+              inputMethod={inputMethod}
+              setInputMethod={setInputMethod}
+              inputText={inputText}
+              setInputText={setInputText}
+              uploadedFile={uploadedFile}
+              setUploadedFile={setUploadedFile}
+              handleUploadFile={handleUploadFile}
+              handleSimplifyText={handleSimplifyText}
+              isLoading={isLoading}
+            />
 
-            {renderInputSection()}
+            <AudienceSelector audience={audience} setAudience={setAudience} />
 
-            <div className="mb-4">
-              <Select value={audience} onValueChange={setAudience}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select target audience" />
-                </SelectTrigger>
-                <SelectContent>
-                  {audienceOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {error && <Alert variant="destructive">{error}</Alert>}
+            {simplifiedText && (
+              <SimplifiedText
+                simplifiedText={simplifiedText}
+                selectedWord={selectedWord}
+                handleWordClick={handleWordClick}
+                selectedSentence={selectedSentence}
+                handleSentenceClick={handleSentenceClick}
+              />
+            )}
 
-            <Button onClick={handleSimplifyText} disabled={isLoading || !inputText} className="w-full">
-              {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-              Simplify Text
+            <Button onClick={handleFurtherSimplification} disabled={!selectedSentence} className="w-full mt-4">
+              Simplify Selected Sentence
             </Button>
+
+            {furtherSimplifiedText && (
+              <div className="p-4 bg-green-50 rounded-md mt-4">
+                <h3 className="text-lg font-semibold">Further Simplified Sentence:</h3>
+                <p>{furtherSimplifiedText}</p>
+                <Button onClick={handleUpdateSimplifiedText} className="mt-2">
+                  Update Simplified Text
+                </Button>
+              </div>
+            )}
+
+
+            <RatingSection
+              rating={rating}
+              setRating={setRating}
+              handleRatingSubmit={handleRatingSubmit}
+            />
           </CardContent>
         </Card>
 
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {simplifiedText && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Simplified Text</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-gray-50 rounded-md mb-4">
-                {simplifiedText.split(" ").map((word, index) => (
-                  <span key={index} className="hover:bg-blue-100 cursor-pointer" onClick={() => handleWordClick(word)}>
-                    {word}{" "}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-4">
-                <p className="mb-2">How helpful was this simplification?</p>
-                <div className="flex items-center gap-4">
-                  <Slider value={[rating]} onValueChange={(val) => setRating(val[0])} max={10} min={1} step={1} />
-                  <span className="font-bold">{rating}/10</span>
-                  <Button onClick={handleRatingSubmit} className="ml-4">
-                    Send Rating
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       <Sidebar

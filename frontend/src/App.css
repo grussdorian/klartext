@@ -40,3 +40,22 @@
 .read-the-docs {
   color: #888;
 }
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
+
+.simplified-text {
+  line-height: 1.6;
+}
+
+.highlight-sentence {
+  background-color: #e0f7fa; /* Light blue for sentence */
+  cursor: pointer;
+}
+
+.highlight-word {
+  background-color: #fff59d; /* Yellow for word */
+  cursor: pointer;
+}
