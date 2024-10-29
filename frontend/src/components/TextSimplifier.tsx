@@ -70,37 +70,46 @@ const TextSimplifier = () => {
   const handleWordClick = useCallback(
     async (word) => {
       if (!isExpertMode || isLoading) return;
-
+  
       setIsSidebarOpen(true);
       const cleanWord = word.replace(/[^a-zA-Z\s]/g, "").toLowerCase();
-
-      if (!sidebarEntries.some((entry) => entry.word === cleanWord)) {
-        try {
-          const [{ data: definitionData }, { data: synonymsData }] = await Promise.all([
-            axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
-            axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
-          ]);
-
-          const definition = definitionData[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found.";
-          const synonyms = synonymsData.length ? synonymsData.map((syn) => syn.word) : ["No synonyms found."];
-
-          setSidebarEntries((prev) => [...prev, { word: cleanWord, definition, synonyms }]);
-        } catch {
-          setSidebarEntries((prev) => [
-            ...prev,
-            { word: cleanWord, definition: "Error fetching definition.", synonyms: ["Error fetching synonyms."] },
-          ]);
-        }
+  
+      // Check if the word already exists in sidebarEntries to prevent duplicates
+      if (sidebarEntries.some((entry) => entry.word === cleanWord)) {
+        return;
+      }
+  
+      try {
+        const [{ data: definitionData }, { data: synonymsData }] = await Promise.all([
+          axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
+          axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
+        ]);
+  
+        const definition = definitionData[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found.";
+        const synonyms = synonymsData.length ? synonymsData.map((syn) => syn.word) : ["No synonyms found."];
+  
+        setSidebarEntries((prev) => [...prev, { word: cleanWord, definition, synonyms }]);
+      } catch {
+        setSidebarEntries((prev) => [
+          ...prev,
+          { word: cleanWord, definition: "Error fetching definition.", synonyms: ["Error fetching synonyms."] },
+        ]);
       }
     },
-    [sidebarEntries, isLoading]
+    [sidebarEntries, isExpertMode, isLoading]
   );
-
+  
   const removeSidebarEntry = (word) => {
     setSidebarEntries((prev) => prev.filter((entry) => entry.word !== word));
   };
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+
+  const toggleExpertMode = () => {
+    setFurtherSimplifiedText("");
+    setSelectedSentence("");
+    setIsExpertMode(prev => !prev);
+  }
 
   const handleFeedbackSubmit = async () => {
     try {
@@ -139,8 +148,6 @@ const TextSimplifier = () => {
       setSynonymToReplace(null);
     }
   }, [selectedWord, synonymToReplace]);
-
-  
 
   // Function triggered when a synonym is clicked
   const handleSynonymClick = (synonym) => {
@@ -225,7 +232,7 @@ const TextSimplifier = () => {
                 <div className="flex items-center gap-4 mt-4">
                   <span className="text-gray-700 font-medium">Expert Mode</span>
                   <div
-                    onClick={() => setIsExpertMode(!isExpertMode)}
+                    onClick={() => toggleExpertMode()}
                     className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
                       }`}
                   >

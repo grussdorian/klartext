@@ -3,13 +3,16 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import multer from 'multer';
+import https from 'https';
+import http from 'http';
+import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
 
 dotenv.config();
 
 const app = express();
 const api_key = process.env.OPENAI_API_KEY;
-const port = 7171;
+const port = 443;
 
 app.use(cors({
   origin: 'http://localhost:5173'
@@ -148,6 +151,25 @@ app.get('/', (req: Request, res: Response) => {
   res.send('<h1>Server Working</h1>');
 });
 
-app.listen(port, () => {
-  console.log(`Backend listening at http://localhost:${port}`);
+const sslOptions = {
+  key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
+  cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
+};
+
+// Create HTTP server for redirecting to HTTPS
+const httpServer = http.createServer((req, res) => {
+  res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+  res.end();
+});
+
+// Start HTTP server on port 80
+httpServer.listen(80, () => {
+  console.log('HTTP server listening on port 80 and redirecting to HTTPS');
+});
+
+// Start HTTPS server on port 443
+const server = https.createServer(sslOptions, app);
+server.listen(443, () => {
+  console.log('Backend listening at https://simplifymytext.org');
+
 });

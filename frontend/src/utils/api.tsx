@@ -9,3 +9,6 @@ export const uploadFile = (file, audience) => {
   return axios.post(`${BASE_URL}/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 };
 export const submitRating = (rating) => axios.post(`${BASE_URL}/rating`, null, { params: { rating } });
+
+
+
