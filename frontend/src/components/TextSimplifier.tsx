@@ -26,7 +26,6 @@ const TextSimplifier = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [synonymToReplace, setSynonymToReplace] = useState(null);
-  // const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [isExpertMode, setIsExpertMode] = useState(false);
 
 
@@ -113,6 +112,20 @@ const TextSimplifier = () => {
     }
   };
 
+  useEffect(() => {
+    // Reset states when the input method changes
+    setInputText(""); // Clear any entered text
+    setUploadedFile(null); // Remove any uploaded file
+    setSimplifiedText(""); // Clear any previously simplified text
+    setFurtherSimplifiedText(""); // Clear any further simplifications
+    setSelectedSentence(""); // Clear selected sentence for further simplification
+    setError(""); // Clear any errors from the previous input method
+    setSidebarEntries([]); // Clear any sidebar entries
+  
+    // Optionally, reset more states as needed for your app
+  }, [inputMethod]);
+  
+
   // New useEffect to handle word replacement
   useEffect(() => {
     if (selectedWord && synonymToReplace) {
@@ -184,7 +197,7 @@ const TextSimplifier = () => {
           <CardContent>
             <InputSection
               inputMethod={inputMethod}
-              setInputMethod={setInputMethod}
+              setInputMethod={(method) => setInputMethod(method)}
               inputText={inputText}
               setInputText={setInputText}
               uploadedFile={uploadedFile}
