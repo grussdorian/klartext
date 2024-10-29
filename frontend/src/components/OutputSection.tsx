@@ -1,20 +1,34 @@
 import React from "react";
 
-const SimplifiedText = ({ simplifiedText, selectedSentence, selectedWord, handleWordClick, handleSentenceClick }) => (
+const SimplifiedText = ({ simplifiedText, selectedSentence, selectedWord, handleWordClick, handleSentenceClick, clickable }) => {
+
+  const handleWClick = (word) => {
+    if (clickable) {
+      handleWordClick(word);
+    }
+  };
+
+  const handleSClick = (sentence) => {
+    if (clickable) {
+      handleSentenceClick(sentence);
+    }
+  };
+
+  return (
+
   <div className="p-4 bg-gray-50 rounded-md mb-4">
     {simplifiedText.split(". ").map((sentence, sentenceIndex) => (
       <p
         key={sentenceIndex}
-        // className="hover:bg-blue-100 cursor-pointer"
         className={sentence === selectedSentence ? "highlight-sentence" : "hover:bg-blue-100 cursor-pointer"}
-        onDoubleClick={() => handleSentenceClick(sentence)} // Double-click for sentence selection
+        onDoubleClick={() => handleSClick(sentence)} // Double-click for sentence selection
 
       >
         {sentence.split(" ").map((word, wordIndex) => (
           <span
             key={`${sentenceIndex}-${wordIndex}`}
             className={word === selectedWord ? "highlight-sentence" : "hover:bg-blue-100 cursor-pointer"}
-            onClick={() => handleWordClick(word)} // Single-click for word selection
+            onClick={() => handleWClick(word)} // Single-click for word selection
           >
             {word}{" "}
           </span>
@@ -22,6 +36,7 @@ const SimplifiedText = ({ simplifiedText, selectedSentence, selectedWord, handle
       </p>
     ))}
   </div>
-);
+  );
+};
 
 export default SimplifiedText;

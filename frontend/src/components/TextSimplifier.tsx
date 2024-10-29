@@ -26,6 +26,10 @@ const TextSimplifier = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [synonymToReplace, setSynonymToReplace] = useState(null);
+  // const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [isExpertMode, setIsExpertMode] = useState(false);
+
+
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
@@ -38,7 +42,8 @@ const TextSimplifier = () => {
       });
       setSimplifiedText(response.data.simplifiedText);
     } catch {
-      setError("Failed to simplify text. Please try again.");
+      console.log(error)
+      setError(`Failed to simplify text. ${error}.`);
     }
     setIsLoading(false);
   };
@@ -57,13 +62,16 @@ const TextSimplifier = () => {
       });
       setSimplifiedText(response.data.simplifiedText);
     } catch {
-      setError("Failed to simplify text. Please try again.");
+      console.log(error)
+      setError(`Failed to simplify text. ${error}.`);
     }
     setIsLoading(false);
   };
 
   const handleWordClick = useCallback(
     async (word) => {
+      if (!isExpertMode || isLoading) return;
+
       setIsSidebarOpen(true);
       const cleanWord = word.replace(/[^a-zA-Z\s]/g, "").toLowerCase();
 
@@ -86,14 +94,14 @@ const TextSimplifier = () => {
         }
       }
     },
-    [sidebarEntries]
+    [sidebarEntries, isLoading]
   );
 
   const removeSidebarEntry = (word) => {
     setSidebarEntries((prev) => prev.filter((entry) => entry.word !== word));
   };
 
-  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
   const handleFeedbackSubmit = async () => {
     try {
@@ -117,7 +125,9 @@ const TextSimplifier = () => {
       setSelectedWord(null);
       setSynonymToReplace(null);
     }
-  }, [selectedWord, synonymToReplace, simplifiedText]);
+  }, [selectedWord, synonymToReplace]);
+
+  
 
   // Function triggered when a synonym is clicked
   const handleSynonymClick = (synonym) => {
@@ -126,24 +136,27 @@ const TextSimplifier = () => {
 
   // Handle sentence double-click
   const handleSentenceClick = (sentence) => {
+    if (!isExpertMode) return;
     setSelectedSentence(sentence);
+    handleFurtherSimplification(sentence);
   };
 
   // Function to further simplify the selected sentence
-  const handleFurtherSimplification = async () => {
-    if (!selectedSentence) return;
+  const handleFurtherSimplification = async (sentence) => {
+    if (!sentence) return;
 
     setIsLoading(true);
     setError("");
     try {
       const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
       const response = await axios.post(`${BASE_URL}/simplify`, {
-        text: selectedSentence,
+        text: sentence,
         audience: audienceLabel,
       });
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
     } catch {
-      setError("Failed to simplify the selected sentence. Please try again.");
+      console.log(error)
+      setError(`Failed to simplify the selected sentence. ${error}.`);
     }
     setIsLoading(false);
   };
@@ -152,14 +165,17 @@ const TextSimplifier = () => {
   const handleUpdateSimplifiedText = () => {
     if (!selectedSentence || !furtherSimplifiedText) return;
 
-    const updatedText = simplifiedText.replace(selectedSentence, furtherSimplifiedText);
+    const updatedText = simplifiedText.replace(
+      new RegExp(`\\b${selectedSentence}\\b`),
+      furtherSimplifiedText
+    );
     setSimplifiedText(updatedText); // Update the main simplified text
     setFurtherSimplifiedText(""); // Clear the further simplified text
     setSelectedSentence(""); // Clear the selected sentence
   };
 
   return (
-    <div className="flex h-screen justify-center items-start"> {/* Ensure content is centered */}
+    <div className="flex justify-center items-start"> {/* Ensure content is centered */}
       <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
         <Card className="mb-4">
           <CardHeader>
@@ -182,36 +198,60 @@ const TextSimplifier = () => {
 
             {error && <Alert variant="destructive">{error}</Alert>}
             {simplifiedText && (
-              <SimplifiedText
-                simplifiedText={simplifiedText}
-                selectedWord={selectedWord}
-                handleWordClick={handleWordClick}
-                selectedSentence={selectedSentence}
-                handleSentenceClick={handleSentenceClick}
-              />
+              <>
+                <SimplifiedText
+                  simplifiedText={simplifiedText}
+                  selectedWord={selectedWord}
+                  handleWordClick={handleWordClick}
+                  selectedSentence={selectedSentence}
+                  handleSentenceClick={handleSentenceClick}
+                  clickable={isExpertMode}
+                />
+
+                {/* Show Advanced Options Button */}
+                <div className="flex items-center gap-4 mt-4">
+                  <span className="text-gray-700 font-medium">Expert Mode</span>
+                  <div
+                    onClick={() => setIsExpertMode(!isExpertMode)}
+                    className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
+                      }`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isExpertMode ? "translate-x-6" : ""
+                        }`}
+                    ></span>
+                  </div>
+                </div>
+
+                {isExpertMode && (
+                  <div className="text-gray-600 mt-2">
+                    <p>In Expert Mode, click on words for definitions and synonyms, and double-click sentences for further simplification.</p>
+                  </div>
+                )}
+
+
+                {/* Further Simplification Section */}
+                {isExpertMode && furtherSimplifiedText && (
+                  <div className="p-4 bg-green-50 rounded-md mt-4">
+                    <h3 className="text-lg font-semibold">Further Simplified Sentence:</h3>
+                    <p>{furtherSimplifiedText}</p>
+                    <Button onClick={handleUpdateSimplifiedText} className="mt-2">
+                      Update Simplified Text
+                    </Button>
+                  </div>
+                )}
+
+                {/* Conditionally render RatingSection when simplifiedText exists */}
+                <RatingSection
+                  rating={rating}
+                  setRating={setRating}
+                  handleFeedbackSubmit={handleFeedbackSubmit}
+                  feedback={feedback}
+                  setFeedback={setFeedback}
+                />
+              </>
             )}
 
-            <Button onClick={handleFurtherSimplification} disabled={!selectedSentence} className="w-full mt-4">
-              Simplify Selected Sentence
-            </Button>
-
-            {furtherSimplifiedText && (
-              <div className="p-4 bg-green-50 rounded-md mt-4">
-                <h3 className="text-lg font-semibold">Further Simplified Sentence:</h3>
-                <p>{furtherSimplifiedText}</p>
-                <Button onClick={handleUpdateSimplifiedText} className="mt-2">
-                  Update Simplified Text
-                </Button>
-              </div>
-            )}
-
-            <RatingSection
-              rating={rating}
-              setRating={setRating}
-              handleFeedbackSubmit={handleFeedbackSubmit}
-              feedback={feedback}
-              setFeedback={setFeedback}
-            />
           </CardContent>
         </Card>
       </div>

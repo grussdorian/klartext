@@ -47,7 +47,7 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 200,
         temperature: 0.7
@@ -59,6 +59,8 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
         }
       }
     );
+    // console.log("Simplified Text:\n")
+    // console.log(response.data.choices[0].message.content.trim())
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -83,6 +85,8 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     try {
       if (file.mimetype === 'application/pdf') {
         extractedText = await extractTextFromPdf(file.buffer);
+        // console.log("Extracted Text: \n")
+        // console.log(extractedText)
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         extractedText = await extractTextFromWord(file.buffer);
       } else if (file.mimetype === 'text/plain') { 

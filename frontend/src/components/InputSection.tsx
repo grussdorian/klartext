@@ -14,7 +14,7 @@ const InputSection = ({
   isLoading,
 }) => (
   <div className="mb-4">
-    <div className="flex gap-4 mb-4">
+    <div className="flex gap-4 mb-4 justify-center">
       {["text", "upload"].map((method) => (
         <Button
           key={method}
