@@ -236,7 +236,7 @@ const TextSimplifier = () => {
                     <h3 className="text-lg font-semibold">Further Simplified Sentence:</h3>
                     <p>{furtherSimplifiedText}</p>
                     <Button onClick={handleUpdateSimplifiedText} className="mt-2">
-                      Update Simplified Text
+                      Replace Selected Sentence
                     </Button>
                   </div>
                 )}
