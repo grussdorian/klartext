@@ -12,10 +12,26 @@ dotenv.config();
 
 const app = express();
 const api_key = process.env.OPENAI_API_KEY;
-const port = 443;
+const port = 7171;
+// Specify the allowed origin (the URL that is allowed to access your server)
+const allowedOrigin = 'https://gruss-cloud.myddns.me';
+
+// Middleware to block all requests except those from the allowed origin
+app.use((req, res, next) => {
+    const origin = req.get('Origin');
+    const referer = req.get('Referer');
+
+    // Check if the request comes from the allowed origin or referer
+    if (origin === allowedOrigin || (referer && referer.startsWith(allowedOrigin))) {
+        next(); // Allow the request to proceed
+    } else {
+        res.status(403).send('Forbidden: Access is denied');
+    }
+});
+
 
 app.use(cors({
-  origin: 'http://localhost:5173'
+  origin: 'https://gruss-cloud.myddns.me',
 }));
 
 app.use(express.json());
@@ -152,8 +168,10 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const sslOptions = {
-  key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
-  cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
+  // key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
+  key: fs.readFileSync('/etc/letsencrypt/live/gruss-cloud.myddns.me/privkey.pem'),
+  // cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
+  cert: fs.readFileSync('/etc/letsencrypt/live/gruss-cloud.myddns.me/fullchain.pem')
 };
 
 // Create HTTP server for redirecting to HTTPS
@@ -162,14 +180,15 @@ const httpServer = http.createServer((req, res) => {
   res.end();
 });
 
-// Start HTTP server on port 80
-httpServer.listen(80, () => {
-  console.log('HTTP server listening on port 80 and redirecting to HTTPS');
-});
+
+// // Start HTTP server on port 80
+// httpServer.listen(7172, () => {
+//   console.log('HTTP server listening on port 7172 and redirecting to HTTPS');
+// });
 
 // Start HTTPS server on port 443
 const server = https.createServer(sslOptions, app);
-server.listen(443, () => {
+server.listen(port, () => {
   console.log('Backend listening at https://simplifymytext.org');
 
 });

@@ -1,3 +1,5 @@
+// Language: typescript
+
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -16,106 +18,128 @@ const TextSimplifier = () => {
   const [audience, setAudience] = useState("general");
   const [simplifiedText, setSimplifiedText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedWord, setSelectedWord] = useState(null);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [selectedSentence, setSelectedSentence] = useState("");
   const [furtherSimplifiedText, setFurtherSimplifiedText] = useState("");
-  const [sidebarEntries, setSidebarEntries] = useState([]);
+  const [sidebarEntries, setSidebarEntries] = useState<
+    { word: string; definition: string; synonyms: string[] }[]
+  >([]);
   const [rating, setRating] = useState(5);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [synonymToReplace, setSynonymToReplace] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [synonymToReplace, setSynonymToReplace] = useState<string | null>(null);
   const [isExpertMode, setIsExpertMode] = useState(false);
-
-
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+  const [currentSynonym, setCurrentSynonym] = useState("");
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
     setError("");
     try {
-      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const audienceLabel = audienceOptions.find(
+        (opt) => opt.value === audience
+      )?.label;
       const response = await axios.post(`${BASE_URL}/simplify`, {
         text: inputText,
         audience: audienceLabel,
       });
       setSimplifiedText(response.data.simplifiedText);
-    } catch {
-      console.log(error)
-      setError(`Failed to simplify text. ${error}.`);
+    } catch (err: any) {
+      console.log(err);
+      setError(`Failed to simplify text. ${err.message}`);
     }
     setIsLoading(false);
   };
 
   const handleUploadFile = async () => {
+    if (!uploadedFile) return;
     setIsLoading(true);
     setError("");
     try {
-      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const audienceLabel = audienceOptions.find(
+        (opt) => opt.value === audience
+      )?.label;
       const formData = new FormData();
       formData.append("file", uploadedFile);
-      formData.append("audience", audienceLabel);
+      formData.append("audience", audienceLabel || "");
 
       const response = await axios.post(`${BASE_URL}/simplify`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setSimplifiedText(response.data.simplifiedText);
-    } catch {
-      console.log(error)
-      setError(`Failed to simplify text. ${error}.`);
+    } catch (err: any) {
+      console.log(err);
+      setError(`Failed to simplify text. ${err.message}`);
     }
     setIsLoading(false);
   };
 
   const handleWordClick = useCallback(
-    async (word) => {
+    async (word: string) => {
       if (!isExpertMode || isLoading) return;
-  
+
       setIsSidebarOpen(true);
       const cleanWord = word.replace(/[^a-zA-Z\s]/g, "").toLowerCase();
-  
+
       // Check if the word already exists in sidebarEntries to prevent duplicates
       if (sidebarEntries.some((entry) => entry.word === cleanWord)) {
         return;
       }
-  
+
       try {
-        const [{ data: definitionData }, { data: synonymsData }] = await Promise.all([
-          axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
-          axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
-        ]);
-  
-        const definition = definitionData[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found.";
-        const synonyms = synonymsData.length ? synonymsData.map((syn) => syn.word) : ["No synonyms found."];
-  
-        setSidebarEntries((prev) => [...prev, { word: cleanWord, definition, synonyms }]);
-      } catch {
+        const [{ data: definitionData }, { data: synonymsData }] =
+          await Promise.all([
+            axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
+            axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
+          ]);
+
+        const definition =
+          definitionData[0]?.meanings[0]?.definitions[0]?.definition ||
+          "Definition not found.";
+        const synonyms = synonymsData.length
+          ? synonymsData.map((syn: any) => syn.word)
+          : ["No synonyms found."];
+
         setSidebarEntries((prev) => [
           ...prev,
-          { word: cleanWord, definition: "Error fetching definition.", synonyms: ["Error fetching synonyms."] },
+          { word: cleanWord, definition, synonyms },
+        ]);
+      } catch (err: any) {
+        setSidebarEntries((prev) => [
+          ...prev,
+          {
+            word: cleanWord,
+            definition: "Error fetching definition.",
+            synonyms: ["Error fetching synonyms."],
+          },
         ]);
       }
     },
     [sidebarEntries, isExpertMode, isLoading]
   );
-  
-  const removeSidebarEntry = (word) => {
+
+  const removeSidebarEntry = (word: string) => {
     setSidebarEntries((prev) => prev.filter((entry) => entry.word !== word));
   };
 
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   const toggleExpertMode = () => {
     setFurtherSimplifiedText("");
     setSelectedSentence("");
-    setIsExpertMode(prev => !prev);
-  }
+    setIsExpertMode((prev) => !prev);
+  };
 
   const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/rating`, null, { params: { rating, feedback } });
+      await axios.post(`${BASE_URL}/rating`, null, {
+        params: { rating, feedback },
+      });
       alert("Rating and feedback sent successfully!");
-      setFeedback(''); // Clear feedback after submission
+      setFeedback(""); // Clear feedback after submission
     } catch {
       alert("Failed to send rating.");
     }
@@ -130,12 +154,11 @@ const TextSimplifier = () => {
     setSelectedSentence(""); // Clear selected sentence for further simplification
     setError(""); // Clear any errors from the previous input method
     setSidebarEntries([]); // Clear any sidebar entries
-  
+
     // Optionally, reset more states as needed for your app
   }, [inputMethod]);
-  
 
-  // New useEffect to handle word replacement
+  // Handle word replacement
   useEffect(() => {
     if (selectedWord && synonymToReplace) {
       const highlightedText = simplifiedText.replace(
@@ -147,36 +170,74 @@ const TextSimplifier = () => {
       setSelectedWord(null);
       setSynonymToReplace(null);
     }
-  }, [selectedWord, synonymToReplace]);
+  }, [selectedWord, synonymToReplace, simplifiedText]);
+
+  // Function to replace the selected word with a synonym based on user choice
+  const replaceWord = (synonym: string, choice: boolean) => {
+    if (choice) {
+      setSynonymToReplace(synonym);
+    }
+    // If canceled, do nothing
+  };
 
   // Function triggered when a synonym is clicked
-  const handleSynonymClick = (synonym) => {
-    setSynonymToReplace(synonym);
+  const handleSynonymClick = (
+    synonym: string,
+    event: React.MouseEvent<HTMLSpanElement>
+  ) => {
+    const popupWidth = 250; // Estimated width of the popup in pixels
+    const popupHeight = 150; // Estimated height of the popup in pixels
+    const margin = 10; // Margin from the viewport edges
+
+    let x = event.clientX;
+    let y = event.clientY;
+
+    // Adjust X position if popup goes beyond the right edge
+    if (x + popupWidth > window.innerWidth) {
+      x = window.innerWidth - popupWidth - margin;
+    }
+
+    // Adjust Y position if popup goes beyond the bottom edge
+    if (y + popupHeight > window.innerHeight) {
+      y = window.innerHeight - popupHeight - margin;
+    }
+
+    setPopupPosition({ x, y });
+    setCurrentSynonym(synonym);
+    setPopupVisible(true);
+  };
+
+  // Function to handle user's choice in the popup
+  const handleUserChoice = (replace: boolean) => {
+    setPopupVisible(false);
+    replaceWord(currentSynonym, replace);
   };
 
   // Handle sentence double-click
-  const handleSentenceClick = (sentence) => {
+  const handleSentenceClick = (sentence: string) => {
     if (!isExpertMode) return;
     setSelectedSentence(sentence);
     handleFurtherSimplification(sentence);
   };
 
   // Function to further simplify the selected sentence
-  const handleFurtherSimplification = async (sentence) => {
+  const handleFurtherSimplification = async (sentence: string) => {
     if (!sentence) return;
 
     setIsLoading(true);
     setError("");
     try {
-      const audienceLabel = audienceOptions.find((opt) => opt.value === audience).label;
+      const audienceLabel = audienceOptions.find(
+        (opt) => opt.value === audience
+      )?.label;
       const response = await axios.post(`${BASE_URL}/simplify`, {
         text: sentence,
         audience: audienceLabel,
       });
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
-    } catch {
-      console.log(error)
-      setError(`Failed to simplify the selected sentence. ${error}.`);
+    } catch (err: any) {
+      console.log(err);
+      setError(`Failed to simplify the selected sentence. ${err.message}.`);
     }
     setIsLoading(false);
   };
@@ -232,7 +293,7 @@ const TextSimplifier = () => {
                 <div className="flex items-center gap-4 mt-4">
                   <span className="text-gray-700 font-medium">Expert Mode</span>
                   <div
-                    onClick={() => toggleExpertMode()}
+                    onClick={toggleExpertMode}
                     className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
                       }`}
                   >
@@ -245,10 +306,12 @@ const TextSimplifier = () => {
 
                 {isExpertMode && (
                   <div className="text-gray-600 mt-2">
-                    <p>In Expert Mode, click on words for definitions and synonyms, and double-click sentences for further simplification.</p>
+                    <p>
+                      In Expert Mode, click on words for definitions and synonyms, and double-click
+                      sentences for further simplification.
+                    </p>
                   </div>
                 )}
-
 
                 {/* Further Simplification Section */}
                 {isExpertMode && furtherSimplifiedText && (
@@ -282,14 +345,42 @@ const TextSimplifier = () => {
         sidebarEntries={sidebarEntries}
         removeSidebarEntry={removeSidebarEntry}
         handleWordClick={handleWordClick}
-        handleSynonymClick={handleSynonymClick}
+        handleSynonymClick={(synonym: string, event: React.MouseEvent<HTMLSpanElement>) => handleSynonymClick(synonym, event)}
         setSelectedWord={setSelectedWord}
       />
+
+      {popupVisible && (
+        <div
+          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50"
+          style={{
+            top: popupPosition.y,
+            left: popupPosition.x,
+            width: "250px", // Fixed width to match popupWidth in handler
+            boxSizing: "border-box",
+          }}
+        >
+          <p className="mb-4 text-gray-700">
+            Replace this occurrence of the word with{" "}
+            <span className="font-semibold">"{currentSynonym}"</span>?
+          </p>
+          <div className="flex justify-end space-x-2">
+            <button
+              onClick={() => handleUserChoice(true)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
+            >
+              OK
+            </button>
+            <button
+              onClick={() => handleUserChoice(false)}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 focus:outline-none"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-
-
-
 };
 
 export default TextSimplifier;
