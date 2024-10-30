@@ -242,14 +242,21 @@ const TextSimplifier = () => {
     setIsLoading(false);
   };
 
+  // Language: typescript
+
+  const removeDoublePeriods = (text: string): string => {
+    return text.replace(/\.{2,}/g, '.');
+  };
+
   // Function to replace the selected sentence with the further simplified sentence
   const handleUpdateSimplifiedText = () => {
     if (!selectedSentence || !furtherSimplifiedText) return;
 
-    const updatedText = simplifiedText.replace(
+    let updatedText = simplifiedText.replace(
       new RegExp(`\\b${selectedSentence}\\b`),
       furtherSimplifiedText
     );
+    updatedText = removeDoublePeriods(updatedText);
     setSimplifiedText(updatedText); // Update the main simplified text
     setFurtherSimplifiedText(""); // Clear the further simplified text
     setSelectedSentence(""); // Clear the selected sentence
