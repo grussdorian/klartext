@@ -14,7 +14,7 @@ const app = express();
 const api_key = process.env.OPENAI_API_KEY;
 const port = 7171;
 // Specify the allowed origin (the URL that is allowed to access your server)
-const allowedOrigin = 'https://gruss-cloud.myddns.me';
+const allowedOrigin = 'https://simplifymytext.org';
 
 // Middleware to block all requests except those from the allowed origin
 app.use((req, res, next) => {
@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 
 
 app.use(cors({
-  origin: 'https://gruss-cloud.myddns.me',
+  origin: 'https://simplifymytext.org',
 }));
 
 app.use(express.json());
@@ -66,7 +66,7 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: "gpt-3.5-turbo",
+        model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 200,
         temperature: 0.7
@@ -168,10 +168,8 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const sslOptions = {
-  // key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
-  key: fs.readFileSync('/etc/letsencrypt/live/gruss-cloud.myddns.me/privkey.pem'),
-  // cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
-  cert: fs.readFileSync('/etc/letsencrypt/live/gruss-cloud.myddns.me/fullchain.pem')
+  key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
+  cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
 };
 
 // Create HTTP server for redirecting to HTTPS
@@ -179,12 +177,6 @@ const httpServer = http.createServer((req, res) => {
   res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
   res.end();
 });
-
-
-// // Start HTTP server on port 80
-// httpServer.listen(7172, () => {
-//   console.log('HTTP server listening on port 7172 and redirecting to HTTPS');
-// });
 
 // Start HTTPS server on port 443
 const server = https.createServer(sslOptions, app);

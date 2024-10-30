@@ -1,4 +1,4 @@
-export const BASE_URL = "https://gruss-cloud.myddns.me:7171";
+export const BASE_URL = "https://simplifymytext.org";
 export const audienceOptions = [
   { value: "scientists", label: "Scientists and Researchers" },
   { value: "students", label: "Students and Academics" },
