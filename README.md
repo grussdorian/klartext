@@ -64,8 +64,12 @@ npm run dev
 3. **Enable Expert Mode** to enable features like word definitions and synonyms by making words and sentences in the simplified text interactive.
 4. **Sidebar for Word Collection**: to view word definitions and enable users to replace words in the simplified text with their synonyms.
 
-
 ## Contributing
 
 We welcome contributions! Please submit issues for bugs or feature requests, and feel free to open pull requests to add new features or improve existing functionality.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](./LICENSE) file for details.
+
 
