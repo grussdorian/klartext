@@ -168,7 +168,7 @@ app.get('/', (req: Request, res: Response) => {
 
 const sslOptions = {
   key: fs.readFileSync( key_path),
-  cert: fs.readFileSync(key_path)
+  cert: fs.readFileSync(cert_path)
 };
 
 // Create HTTP server for redirecting to HTTPS
