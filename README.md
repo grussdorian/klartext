@@ -13,6 +13,8 @@
 ## Demo
 You can checkout our demo on https://simplifymytext.org
 
+<img width="726" alt="Screenshot 2024-10-30 at 13 21 59" src="https://github.com/user-attachments/assets/122f88dc-95af-49b3-b1ec-55d403c15609">
+
 ## Technologies Used
 
 - **Frontend**: React with TypeScript.
