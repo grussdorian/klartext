@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "esModuleInterop": true,
+    "jsx": "react",
+    "lib": ["dom", "es2015"],
+    
+  }
+}
+
+
+
