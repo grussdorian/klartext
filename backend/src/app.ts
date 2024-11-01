@@ -1,39 +1,40 @@
-import express, { Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import multer from 'multer';
 import https from 'https';
-import http from 'http';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
 
 dotenv.config();
 
 const app = express();
-const api_key = process.env.OPENAI_API_KEY;
+const api_key = process.env.OPENAI_API_KEY || "error" ;
 const port = 7171;
-// Specify the allowed origin (the URL that is allowed to access your server)
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
+
 const allowedOrigin = 'https://simplifymytext.org';
-// const allowedOrigin = "*";
-
-// Middleware to block all requests except those from the allowed origin
-// app.use((req, res, next) => {
-//     const origin = req.get('Origin');
-//     const referer = req.get('Referer');
-
-//     // Check if the request comes from the allowed origin or referer
-//     if (origin === allowedOrigin || (referer && referer.startsWith(allowedOrigin))) {
-//         next(); // Allow the request to proceed
-//     } else {
-//         res.status(403).send('Forbidden: Access is denied');
-//     }
-// });
-
 
 app.use(cors({
   origin: allowedOrigin,
 }));
+
+// Middleware to check the origin of incoming requests
+function checkOrigin(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin || req.headers.referer;
+
+  if (origin && origin.startsWith(allowedOrigin)) {
+      // Request is coming from the allowed frontend
+      next();
+  } else {
+      // Reject request if it doesn't come from the allowed origin
+      res.status(403).json({ message: 'Access denied: Requests from your origin are not allowed.' });
+  }
+}
+
+app.use(checkOrigin)
 
 app.use(express.json());
 
@@ -79,8 +80,6 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
         }
       }
     );
-    // console.log("Simplified Text:\n")
-    // console.log(response.data.choices[0].message.content.trim())
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -105,8 +104,6 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     try {
       if (file.mimetype === 'application/pdf') {
         extractedText = await extractTextFromPdf(file.buffer);
-        // console.log("Extracted Text: \n")
-        // console.log(extractedText)
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         extractedText = await extractTextFromWord(file.buffer);
       } else if (file.mimetype === 'text/plain') { 
@@ -169,17 +166,10 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const sslOptions = {
-  key: fs.readFileSync(process.env.SSL_KEY_PATH),
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH)
+  key: fs.readFileSync(SSL_KEY_PATH),
+  cert: fs.readFileSync(SSL_CERT_PATH)
 };
 
-// Create HTTP server for redirecting to HTTPS
-//const httpServer = http.createServer((req, res) => {
-//  res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
-//  res.end();
-//});
-
-// Start HTTPS server on port 443
 const server = https.createServer(sslOptions, app);
 server.listen(port, () => {
   console.log('Backend listening at https://simplifymytext.org');
