@@ -12,7 +12,9 @@ dotenv.config();
 
 const app = express();
 const api_key = process.env.OPENAI_API_KEY;
-const port = 7171;
+const cert_path = process.env.SSL_CERT_PATH;
+const key_path = process.env.SSL_KEY_PATH;
+const port = process.env.PORT ||  7171;
 // Specify the allowed origin (the URL that is allowed to access your server)
 const allowedOrigin = 'https://simplifymytext.org';
 
@@ -78,8 +80,7 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
         }
       }
     );
-    // console.log("Simplified Text:\n")
-    // console.log(response.data.choices[0].message.content.trim())
+    
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -104,8 +105,6 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     try {
       if (file.mimetype === 'application/pdf') {
         extractedText = await extractTextFromPdf(file.buffer);
-        // console.log("Extracted Text: \n")
-        // console.log(extractedText)
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         extractedText = await extractTextFromWord(file.buffer);
       } else if (file.mimetype === 'text/plain') { 
@@ -168,8 +167,8 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const sslOptions = {
-  key: fs.readFileSync('../etc/ssl/private/_.simplifymytext.org_private_key.key'),
-  cert: fs.readFileSync('../etc/ssl/simplifymytext.org_ssl_certificate.cer')
+  key: fs.readFileSync( key_path),
+  cert: fs.readFileSync(key_path)
 };
 
 // Create HTTP server for redirecting to HTTPS
