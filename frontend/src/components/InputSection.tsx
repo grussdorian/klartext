@@ -65,7 +65,7 @@ const InputSection = ({
       className="w-full mt-4"
     >
       {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-      Simplify Textt
+      Simplify Text
     </Button>
   </div>
 );
