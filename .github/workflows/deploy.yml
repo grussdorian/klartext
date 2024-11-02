@@ -21,11 +21,11 @@ jobs:
           node-version: '18.19.1'
 
       - name: Install frontend dependencies
-        working-directory: /home/klartext/frontend
+        working-directory: ./klartext/frontend
         run: npm install
 
       - name: Install backend dependencies
-        working-directory: /home/klartext/backend
+        working-directory: ./klartext/backend
         run: npm install
 
       - name: Restart frontend service
