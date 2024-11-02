@@ -28,6 +28,12 @@ jobs:
         working-directory: ./klartext/backend
         run: npm install
 
+      - name: Copy frontend .env file
+        run: sudo cp /root/secrets/frontend/.env ./klartext/frontend/.env
+
+      - name: Copy backend .env file
+        run: sudo cp /root/secrets/backend/.env ./klartext/backend/.env
+
       - name: Restart frontend service
         run: |
           sudo systemctl restart klartext-frontend.service
