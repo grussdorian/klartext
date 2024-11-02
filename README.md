@@ -1,5 +1,7 @@
 # Klartext: AI-based Translation of Websites Into Plain Language
 
+[![Deploy Frontend and Backend](https://github.com/grussdorian/klartext/actions/workflows/deploy.yml/badge.svg)](https://github.com/grussdorian/klartext/actions/workflows/deploy.yml)
+
 **Klartext** is an open-source project aimed at making complex information accessible by providing automatic text simplification for documents across various domains. This application allows users to input complex text and receive a simplified version suited to a target audience, promoting understanding and accessibility.
 
 ## Features
