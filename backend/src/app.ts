@@ -6,6 +6,7 @@ import multer from 'multer';
 import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
+import e from 'express';
 
 dotenv.config();
 
@@ -16,15 +17,22 @@ const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
 const deploy = process.env.NODE_ENV === "deploy";
 const allowedOrigin = 'https://simplifymytext.org';
+
 app.use(cors({
-  origin: allowedOrigin,
+  origin: (origin, callback) => {
+    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost")) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 }));
 
 // Middleware to check the origin of incoming requests
 function checkOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin || req.headers.referer;
 
-  if (origin && origin.startsWith(allowedOrigin)) {
+  if (origin && ( origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
       // Request is coming from the allowed frontend
       next();
   } else {
@@ -116,6 +124,11 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
   }
 
   try {
+    if (!extractedText) {
+      return res.status(400).json({ error: "No text extracted from file" });
+    } else if (extractedText.length > 5000) {
+      return res.status(400).json({ error: "Text is too long. Maximum length is 5000 characters" });
+    }
     const simplifiedText = await simplifyText(extractedText, audience);
     res.json({ simplifiedText });
   } catch (error) {
