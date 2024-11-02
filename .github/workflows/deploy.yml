@@ -29,10 +29,10 @@ jobs:
         run: npm install
 
       - name: Copy frontend .env file
-        run: sudo cp /root/secrets/frontend/.env /home/klartext/frontend/.env
+        run: sudo cp /root/secrets/frontend/.env /home/klartext/klartext/frontend/.env
 
       - name: Copy backend .env file
-        run: sudo cp /root/secrets/backend/.env /home/klartext/backend/.env
+        run: sudo cp /root/secrets/backend/.env /home/klartext/klartext/backend/.env
 
       - name: Restart frontend service
         run: |
