@@ -1,0 +1,37 @@
+name: Deploy Frontend and Backend
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18.19.1'
+
+      - name: Install frontend dependencies
+        working-directory: /home/klartext/frontend
+        run: npm install
+
+      - name: Install backend dependencies
+        working-directory: /home/klartext/backend
+        run: npm install
+
+      - name: Restart frontend service
+        run: |
+          sudo systemctl restart klartext-frontend.service
+
+      - name: Restart backend service
+        run: |
+          sudo systemctl restart klartext-backend.service
