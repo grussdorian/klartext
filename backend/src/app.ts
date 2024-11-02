@@ -14,9 +14,8 @@ const api_key = process.env.OPENAI_API_KEY || "error" ;
 const port = 7171;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
-
+const deploy = process.env.NODE_ENV === "deploy";
 const allowedOrigin = 'https://simplifymytext.org';
-
 app.use(cors({
   origin: allowedOrigin,
 }));
@@ -165,13 +164,18 @@ app.get('/', (req: Request, res: Response) => {
   res.send('<h1>Server Working</h1>');
 });
 
-const sslOptions = {
-  key: fs.readFileSync(SSL_KEY_PATH),
-  cert: fs.readFileSync(SSL_CERT_PATH)
-};
-
-const server = https.createServer(sslOptions, app);
-server.listen(port, () => {
-  console.log('Backend listening at https://simplifymytext.org');
-
-});
+if (deploy){
+  const sslOptions = {
+    key: fs.readFileSync(SSL_KEY_PATH),
+    cert: fs.readFileSync(SSL_CERT_PATH)
+  };
+  const server = https.createServer(sslOptions, app);
+  server.listen(port, () => {
+    console.log('Backend listening at https://simplifymytext.org:7171');
+  
+  });
+} else {
+  app.listen(port, ()=>{
+    console.log(`Backend listening at http://localhost:7171`)
+  })
+}
