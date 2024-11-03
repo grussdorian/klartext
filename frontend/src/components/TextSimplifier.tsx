@@ -367,7 +367,7 @@ const TextSimplifier = () => {
           }}
         >
           <p className="mb-4 text-gray-700">
-            Replace this occurrence of the word with{" "}
+            Replace all occurrences of this word with {" "}
             <span className="font-semibold">"{currentSynonym}"</span>?
           </p>
           <div className="flex justify-end space-x-2">
