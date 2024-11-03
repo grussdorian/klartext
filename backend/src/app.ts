@@ -17,6 +17,7 @@ const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
 const deploy = process.env.NODE_ENV === "deploy";
 const allowedOrigin = 'https://simplifymytext.org';
+const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -123,12 +124,13 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     }
   }
 
+  if (!extractedText) {
+    return res.status(400).json({ error: "No text extracted from file" });
+  } else if (extractedText.length > wordLimit) {
+    return res.status(400).json(`Text is too long. Maximum length is ${wordLimit} characters`);
+  }
+
   try {
-    if (!extractedText) {
-      return res.status(400).json({ error: "No text extracted from file" });
-    } else if (extractedText.length > 5000) {
-      return res.status(400).json({ error: "Text is too long. Maximum length is 5000 characters" });
-    }
     const simplifiedText = await simplifyText(extractedText, audience);
     res.json({ simplifiedText });
   } catch (error) {
