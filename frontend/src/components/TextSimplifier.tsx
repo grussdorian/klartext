@@ -49,7 +49,7 @@ const TextSimplifier = () => {
       setSimplifiedText(response.data.simplifiedText);
     } catch (err: any) {
       console.log(err);
-      setError(`Failed to simplify text. ${err.message}`);
+      setError(`Failed to simplify text. ${err.response.data}`);
     }
     setIsLoading(false);
   };
@@ -72,7 +72,7 @@ const TextSimplifier = () => {
       setSimplifiedText(response.data.simplifiedText);
     } catch (err: any) {
       console.log(err);
-      setError(`Failed to simplify text. ${err.message}`);
+      setError(`Failed to simplify text. ${err.response.data}`);
     }
     setIsLoading(false);
   };
@@ -237,7 +237,7 @@ const TextSimplifier = () => {
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
     } catch (err: any) {
       console.log(err);
-      setError(`Failed to simplify the selected sentence. ${err.message}.`);
+      setError(`Failed to simplify the selected sentence. ${err.response.data}.`);
     }
     setIsLoading(false);
   };
