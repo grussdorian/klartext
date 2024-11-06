@@ -13,9 +13,11 @@
 - **Sidebar Word Collection**: Selected words are added to the sidebar for easy access to their definitions and synonyms, preventing duplicates.
 
 ## Demo
-You can checkout our demo on https://simplifymytext.org
+You can checkout our demo at https://simplifymytext.org
 
 <img width="726" alt="Screenshot 2024-10-30 at 13 21 59" src="https://github.com/user-attachments/assets/122f88dc-95af-49b3-b1ec-55d403c15609">
+
+A **tutorial video** is available at https://datashare.tu-dresden.de/s/XMqESdFefKxfJJ5
 
 ## Technologies Used
 
