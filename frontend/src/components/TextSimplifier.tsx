@@ -1,5 +1,4 @@
 // Language: typescript
-
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 
@@ -9,6 +8,8 @@ import { Button } from "./ui/button";
 import Sidebar from "./ui/Sidebar";
 
 import { audienceOptions, BASE_URL } from "../utils/constants";
+
+import { Feedback } from "../types"
 
 import InputSection from "./InputSection";
 import AudienceSelector from "./TargetAudience";
@@ -42,8 +43,8 @@ const TextSimplifier = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   //Feedback
-  const [feedback, setFeedback] = useState("");
-  const [rating, setRating] = useState(5);
+  const defaultFeedback = { rating: 5, text: "" };
+  const [feedback, setFeedback] = useState<Feedback>(defaultFeedback)
 
   // Misc
   const [isLoading, setIsLoading] = useState(false);
@@ -149,11 +150,9 @@ const TextSimplifier = () => {
 
   const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/rating`, null, {
-        params: { rating, feedback },
-      });
+      await axios.post(`${BASE_URL}/feedback`, feedback);
       alert("Rating and feedback sent successfully!");
-      setFeedback(""); // Clear feedback after submission
+      setFeedback(defaultFeedback); // Clear feedback after submission
     } catch {
       alert("Failed to send rating.");
     }
@@ -345,11 +344,10 @@ const TextSimplifier = () => {
 
                 {/* Conditionally render RatingSection when simplifiedText exists */}
                 <RatingSection
-                  rating={rating}
-                  setRating={setRating}
-                  handleFeedbackSubmit={handleFeedbackSubmit}
+
                   feedback={feedback}
                   setFeedback={setFeedback}
+                  handleFeedbackSubmit={handleFeedbackSubmit}
                 />
               </>
             )}
