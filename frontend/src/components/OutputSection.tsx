@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect } from "react";
 
-const SimplifiedText = ({
+const OutputSection = ({
   simplifiedText,
   selectedSentence,
   selectedWord,
@@ -102,4 +102,4 @@ const SimplifiedText = ({
   );
 };
 
-export default SimplifiedText;
+export default OutputSection;
