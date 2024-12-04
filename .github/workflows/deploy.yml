@@ -21,18 +21,18 @@ jobs:
           node-version: '18.19.1'
 
       - name: Install frontend dependencies
-        working-directory: /home/klartext/klartext/frontend
+        working-directory: /home/klartext/klartext/klartext/frontend
         run: npm install
 
       - name: Install backend dependencies
-        working-directory: /home/klartext/klartext/backend
+        working-directory: /home/klartext/klartext/klartext/backend
         run: npm install
 
       - name: Copy frontend .env file
-        run: sudo cp /root/secrets/frontend/.env /home/klartext/klartext/frontend/.env
+        run: sudo cp /root/secrets/frontend/.env /home/klartext/klartext/klartext/frontend/.env
 
       - name: Copy backend .env file
-        run: sudo cp /root/secrets/backend/.env /home/klartext/klartext/backend/.env
+        run: sudo cp /root/secrets/backend/.env /home/klartext/klartext/klartext/backend/.env
 
       - name: Restart frontend service
         run: |
