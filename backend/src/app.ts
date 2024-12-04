@@ -6,7 +6,6 @@ import multer from 'multer';
 import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
-import e from 'express';
 
 dotenv.config();
 
@@ -16,12 +15,15 @@ const port = 7171;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
 const deploy = process.env.NODE_ENV === "deploy";
+const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
+const allowedExtension = "chrome-extension://jhenkkcfaegflhfhblepdkpnkpcgmbal"
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost")) {
+    console.log(origin)
+    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") && TOKEN!=="No token provided") {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -33,7 +35,7 @@ app.use(cors({
 function checkOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin || req.headers.referer;
 
-  if (origin && ( origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
+  if (origin && ( origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
       // Request is coming from the allowed frontend
       next();
   } else {
@@ -54,6 +56,7 @@ type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "
 // Simplify text based on user group
 const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
   let prompt: string;
+  console.log("Simplifying text for:", userGroup);
   
   switch (userGroup) {
     case "Scientists and Researchers":
@@ -98,6 +101,7 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
 };
 
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
+  console.log("Simplify request received");
   const audience = req.body.audience as AudienceGroup;
   const text = req.body.text as string;
   const file = req.file;
@@ -191,6 +195,6 @@ if (deploy){
   });
 } else {
   app.listen(port, ()=>{
-    console.log(`Backend listening at http://localhost:7171`)
+    console.log(`Backend listening at http://localhost:${port}`);
   })
 }

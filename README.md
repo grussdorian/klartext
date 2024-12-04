@@ -6,6 +6,8 @@
 
 ## Features
 
+- *New:* Chrome extension support in development
+
 - **Text Simplification**: Input complex text, or upload a PDF, to receive a simplified output designed for easier comprehension.
 - **Targeted Audience Levels**: Customize text simplification to suit specific audience levels, ensuring that the output is aligned with the reader’s proficiency.
 - **Expert Mode**: Toggle a mode that allows users to interact with words or sentences for further analysis and simplification.
