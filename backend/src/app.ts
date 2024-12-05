@@ -6,6 +6,7 @@ import multer from 'multer';
 import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
+import {createHash} from 'crypto';
 
 dotenv.config();
 
@@ -17,13 +18,16 @@ const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
 const deploy = process.env.NODE_ENV === "deploy";
 const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
-const allowedExtension = "chrome-extension://jhenkkcfaegflhfhblepdkpnkpcgmbal"
+const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
+
+
+const extension_token = createHash('sha256').update(TOKEN).digest('hex');
 
 app.use(cors({
   origin: (origin, callback) => {
     console.log(origin)
-    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") && TOKEN!=="No token provided") {
+    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost")) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -34,8 +38,8 @@ app.use(cors({
 // Middleware to check the origin of incoming requests
 function checkOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin || req.headers.referer;
-
-  if (origin && ( origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
+  const token = req.headers.token;
+  if (origin && ( origin.startsWith(allowedOrigin) || (origin.startsWith(allowedExtension) && token === extension_token) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
       // Request is coming from the allowed frontend
       next();
   } else {
