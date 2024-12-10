@@ -9,7 +9,7 @@ export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
     try {
         // Directly pass the Buffer to pdf-parse
         const data = await pdf(fileBuffer);
-        return data.text; // Return the extracted text
+        return data.text.slice(0,5000); // Return the extracted text
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error("Error reading PDF file:", error);
@@ -21,7 +21,7 @@ export async function extractTextFromPdf(fileBuffer: Buffer): Promise<string> {
 export async function extractTextFromWord(fileBuffer: Buffer): Promise<string> {
     try {
         const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
-        return value; // The extracted text
+        return value.slice(0, 5000); // The extracted text
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error("Error reading Word file:", error);

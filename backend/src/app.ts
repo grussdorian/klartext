@@ -9,6 +9,9 @@ import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
 import {createHash} from 'crypto';
 import redisClient from './db';
 
+import { Feedback } from '../types'
+
+
 dotenv.config();
 
 const app = express();
@@ -61,23 +64,25 @@ type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "
 // Simplify text based on user group
 const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
   let prompt: string;
-  console.log("Simplifying text for:", userGroup);
+
+  const instructions = "Split long sentences into shorter sentences that are easily understood on their own."
+
   
   switch (userGroup) {
     case "Scientists and Researchers":
-      prompt = `Simplify the following text for scientists and researchers:\n\n${text}`;
+      prompt = `Simplify the following text for scientists and researchers:\n\n${text}.\n${instructions}`;
       break;
     case "Students and Academics":
-      prompt = `Simplify the following text for students and academics:\n\n${text}`;
+      prompt = `Simplify the following text for students and academics:\n\n${text}\n${instructions}`;
       break;
     case "Industry Professionals":
-      prompt = `Simplify the following text for industry professionals:\n\n${text}`;
+      prompt = `Simplify the following text for industry professionals:\n\n${text}\n${instructions}`;
       break;
     case "Journalists and Media Professionals":
-      prompt = `Simplify the following text for journalists and media professionals:\n\n${text}`;
+      prompt = `Simplify the following text for journalists and media professionals:\n\n${text}\n${instructions}`;
       break;
     default:
-      prompt = `Simplify the following text for the general public (non-expert audience):\n\n${text}`;
+      prompt = `Simplify the following text for the general public (non-expert audience):\n\n${text}\n${instructions}`;
   }
 
   try {
@@ -101,8 +106,14 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error during text simplification: ${errorMessage}`);
     return `Error during text simplification: ${errorMessage}`;
-}
+  } 
 
+};
+
+const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+  const uniqueId = Date.now().toString();
+  const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
+  await redisClient.set(key, responsePrompt);
 };
 
 const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
@@ -155,7 +166,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
 });
 
 
-app.get('/word-info', async (req: Request, res: Response) => {
+app.get("/word-info", async (req: Request, res: Response) => {
   const word = req.query.word as string;
 
   if (!word) {
@@ -163,11 +174,31 @@ app.get('/word-info', async (req: Request, res: Response) => {
   }
 
   try {
-    const definitionResponse = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    const synonymResponse = await axios.get(`https://api.datamuse.com/words?rel_syn=${word}`);
+    const prompt = `
+      Provide the following details for the word "${word}":
+      1. A clear and concise definition.
+      2. A list of synonyms (if any). If there are no synonyms, say "No synonyms found."
+    `;
 
-    const definition = definitionResponse.data[0]?.meanings[0]?.definitions[0]?.definition || "Definition not found";
-    const synonyms = synonymResponse.data.map((syn: { word: string }) => syn.word) || ["No synonyms found"];
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: "You are an English language assistant." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+
+      }
+    );
+
+    const responseContent = response.data.choices[0]?.message?.content || "";
+
+    // Parse the AI response into a structured JSON (assuming it follows the format of the prompt)
+    const [definitionMatch, synonymsMatch] = responseContent.split("\n").map((line: string) => line.split(":")[1]?.trim());
+    const definition = definitionMatch || "Definition not found";
+    const synonyms = synonymsMatch ? synonymsMatch.split(",").map((synonym: string) => synonym.trim()) : ["No synonyms found"];
 
     res.json({ word, definition, synonyms });
   } catch (error) {
@@ -177,16 +208,16 @@ app.get('/word-info', async (req: Request, res: Response) => {
 });
 
 
-// Rating
-app.post('/rating', (req: Request, res: Response) => {
-  const rating = parseInt(req.query.rating as string, 10);
-  const feedback = req.query.feedback
+// Feedback
+app.post('/feedback', (req: Request, res: Response) => {
+  const { rating, text }: Feedback = req.body
+
   if (isNaN(rating) || rating < 1 || rating > 10) {
     return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
   }
 
   console.log("User rated:", rating);
-  console.log("User feedback: ", feedback)
+  console.log("User feedback: ", text)
   // Future: Save rating to a database if needed
   res.status(200).json({ message: "Rating submitted successfully" });
 });
