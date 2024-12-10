@@ -7,6 +7,7 @@ import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
 import {createHash} from 'crypto';
+import redisClient from './db';
 
 dotenv.config();
 
@@ -104,6 +105,12 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
 
 };
 
+const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+  const uniqueId = Date.now().toString();
+  const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
+  await redisClient.set(key, responsePrompt);
+};
+
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
   console.log("Simplify request received");
   const audience = req.body.audience as AudienceGroup;
@@ -140,6 +147,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
 
   try {
     const simplifiedText = await simplifyText(extractedText, audience);
+    await saveToRedis(extractedText, audience, simplifiedText);
     res.json({ simplifiedText });
   } catch (error) {
     res.status(500).json({ error: "Error during text simplification" });
