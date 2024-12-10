@@ -6,7 +6,8 @@ import multer from 'multer';
 import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
-import e from 'express';
+import {createHash} from 'crypto';
+import redisClient from './db';
 
 import { Feedback } from '../types'
 
@@ -18,12 +19,18 @@ const port = 7171;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
 const deploy = process.env.NODE_ENV === "deploy";
+const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
+const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
+
+
+const extension_token = createHash('sha256').update(TOKEN).digest('hex');
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost")) {
+    console.log(origin)
+    if (!origin || origin.startsWith(allowedOrigin) || origin.startsWith(allowedExtension) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost")) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -34,8 +41,8 @@ app.use(cors({
 // Middleware to check the origin of incoming requests
 function checkOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin || req.headers.referer;
-
-  if (origin && ( origin.startsWith(allowedOrigin) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
+  const token = req.headers.token;
+  if (origin && ( origin.startsWith(allowedOrigin) || (origin.startsWith(allowedExtension) && token === extension_token) || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") ) ) {
       // Request is coming from the allowed frontend
       next();
   } else {
@@ -57,7 +64,9 @@ type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "
 const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
   let prompt: string;
 
+
   const instructions = "Split long sentences into shorter sentences that are easily understood on their own."
+
   
   switch (userGroup) {
     case "Scientists and Researchers":
@@ -101,7 +110,14 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
 
 };
 
+const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+  const uniqueId = Date.now().toString();
+  const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
+  await redisClient.set(key, responsePrompt);
+};
+
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
+  console.log("Simplify request received");
   const audience = req.body.audience as AudienceGroup;
   const text = req.body.text as string;
   const file = req.file;
@@ -136,6 +152,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
 
   try {
     const simplifiedText = await simplifyText(extractedText, audience);
+    await saveToRedis(extractedText, audience, simplifiedText);
     res.json({ simplifiedText });
   } catch (error) {
     res.status(500).json({ error: "Error during text simplification" });
@@ -215,6 +232,6 @@ if (deploy){
   });
 } else {
   app.listen(port, ()=>{
-    console.log(`Backend listening at http://localhost:7171`)
+    console.log(`Backend listening at http://localhost:${port}`);
   })
 }
