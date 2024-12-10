@@ -116,11 +116,6 @@ const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, 
   await redisClient.set(key, responsePrompt);
 };
 
-const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
-  const uniqueId = Date.now().toString();
-  const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
-  await redisClient.set(key, responsePrompt);
-};
 
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
   console.log("Simplify request received");
