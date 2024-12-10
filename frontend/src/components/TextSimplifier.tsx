@@ -1,39 +1,54 @@
 // Language: typescript
-
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
+
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Alert } from "./ui/alert";
 import { Button } from "./ui/button";
 import Sidebar from "./ui/Sidebar";
+
 import { audienceOptions, BASE_URL } from "../utils/constants";
+
+import { Feedback } from "../types"
+
 import InputSection from "./InputSection";
 import AudienceSelector from "./TargetAudience";
-import SimplifiedText from "./OutputSection";
+import OutputSection from "./OutputSection";
 import RatingSection from "./RatingSection";
-import { Alert } from "./ui/alert";
 
 const TextSimplifier = () => {
+  //Input
   const [inputMethod, setInputMethod] = useState("text");
   const [inputText, setInputText] = useState("");
   const [audience, setAudience] = useState("general");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  //Output
   const [simplifiedText, setSimplifiedText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  //Expert Mode
+  const [isExpertMode, setIsExpertMode] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [selectedSentence, setSelectedSentence] = useState("");
   const [furtherSimplifiedText, setFurtherSimplifiedText] = useState("");
+  const [currentSynonym, setCurrentSynonym] = useState("");
+  const [synonymToReplace, setSynonymToReplace] = useState<string | null>(null);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+
+  //Sidebar
   const [sidebarEntries, setSidebarEntries] = useState<
     { word: string; definition: string; synonyms: string[] }[]
   >([]);
-  const [rating, setRating] = useState(5);
-  const [feedback, setFeedback] = useState("");
-  const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [synonymToReplace, setSynonymToReplace] = useState<string | null>(null);
-  const [isExpertMode, setIsExpertMode] = useState(false);
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
-  const [currentSynonym, setCurrentSynonym] = useState("");
+
+  //Feedback
+  const defaultFeedback = { rating: 5, text: "" };
+  const [feedback, setFeedback] = useState<Feedback>(defaultFeedback)
+
+  // Misc
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
@@ -135,11 +150,9 @@ const TextSimplifier = () => {
 
   const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/rating`, null, {
-        params: { rating, feedback },
-      });
+      await axios.post(`${BASE_URL}/feedback`, feedback);
       alert("Rating and feedback sent successfully!");
-      setFeedback(""); // Clear feedback after submission
+      setFeedback(defaultFeedback); // Clear feedback after submission
     } catch {
       alert("Failed to send rating.");
     }
@@ -242,8 +255,6 @@ const TextSimplifier = () => {
     setIsLoading(false);
   };
 
-  // Language: typescript
-
   const removeDoublePeriods = (text: string): string => {
     return text.replace(/\.{2,}/g, '.');
   };
@@ -287,7 +298,7 @@ const TextSimplifier = () => {
             {error && <Alert variant="destructive">{error}</Alert>}
             {simplifiedText && (
               <>
-                <SimplifiedText
+                <OutputSection
                   simplifiedText={simplifiedText}
                   selectedWord={selectedWord}
                   handleWordClick={handleWordClick}
@@ -333,11 +344,10 @@ const TextSimplifier = () => {
 
                 {/* Conditionally render RatingSection when simplifiedText exists */}
                 <RatingSection
-                  rating={rating}
-                  setRating={setRating}
-                  handleFeedbackSubmit={handleFeedbackSubmit}
+
                   feedback={feedback}
                   setFeedback={setFeedback}
+                  handleFeedbackSubmit={handleFeedbackSubmit}
                 />
               </>
             )}
