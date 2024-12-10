@@ -11,6 +11,7 @@ import redisClient from './db';
 
 import { Feedback } from '../types'
 
+
 dotenv.config();
 
 const app = express();
@@ -64,7 +65,6 @@ type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "
 const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
   let prompt: string;
 
-
   const instructions = "Split long sentences into shorter sentences that are easily understood on their own."
 
   
@@ -108,6 +108,12 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
     return `Error during text simplification: ${errorMessage}`;
   } 
 
+};
+
+const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+  const uniqueId = Date.now().toString();
+  const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
+  await redisClient.set(key, responsePrompt);
 };
 
 const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
