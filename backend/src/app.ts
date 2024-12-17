@@ -11,6 +11,8 @@ import redisClient from './db';
 
 import { Feedback } from '../types'
 
+import { TargetAudiences } from './types'
+
 
 dotenv.config();
 
@@ -58,27 +60,25 @@ app.use(express.json());
 
 const upload = multer();
 
-// Define types for audience options
-type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "Industry Professionals" | "Journalists and Media Professionals" | "General Public";
 
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
+const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<string> => {
   let prompt: string;
 
-  const instructions = "Split long sentences into shorter sentences that are easily understood on their own."
+  const instructions = "Split long sentences into shorter sentences. The language of the simplified text should match the language of the text I provide you with."
 
   
   switch (userGroup) {
-    case "Scientists and Researchers":
+    case TargetAudiences.ScientistsResearchers:
       prompt = `Simplify the following text for scientists and researchers:\n\n${text}.\n${instructions}`;
       break;
-    case "Students and Academics":
+    case TargetAudiences.StudentsAcademics:
       prompt = `Simplify the following text for students and academics:\n\n${text}\n${instructions}`;
       break;
-    case "Industry Professionals":
+    case TargetAudiences.IndustryProfessionals:
       prompt = `Simplify the following text for industry professionals:\n\n${text}\n${instructions}`;
       break;
-    case "Journalists and Media Professionals":
+    case TargetAudiences.JournalistsMedia:
       prompt = `Simplify the following text for journalists and media professionals:\n\n${text}\n${instructions}`;
       break;
     default:
@@ -90,7 +90,10 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
       'https://api.openai.com/v1/chat/completions',
       {
         model: "gpt-4",
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: "You are a linguistic expert who specialises in plain lanugage."},
+          { role: "user", content: prompt }
+        ],
         max_tokens: 200,
         temperature: 0.7
       },
@@ -110,7 +113,7 @@ const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<str
 
 };
 
-const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+const saveToRedis = async (originalText: string, targetAudience: TargetAudiences, responsePrompt: string) => {
   const uniqueId = Date.now().toString();
   const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
   await redisClient.set(key, responsePrompt);
@@ -119,7 +122,7 @@ const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, 
 
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
   console.log("Simplify request received");
-  const audience = req.body.audience as AudienceGroup;
+  const audience = req.body.audience as TargetAudiences;
   const text = req.body.text as string;
   const file = req.file;
 
@@ -171,7 +174,7 @@ app.get("/word-info", async (req: Request, res: Response) => {
   try {
     const prompt = `
       Provide the following details for the word "${word}":
-      1. A clear and concise definition.
+      1. A clear and concise definition, ideally one that could be found in an official dicitionary. If no definition exists, say "No definitions found."
       2. A list of synonyms (if any). If there are no synonyms, say "No synonyms found."
     `;
 
@@ -180,7 +183,7 @@ app.get("/word-info", async (req: Request, res: Response) => {
       {
         model: "gpt-4",
         messages: [
-          { role: "system", content: "You are an English language assistant." },
+          { role: "system", content: "You are a linguisitc expert." },
           { role: "user", content: prompt },
         ],
         temperature: 0.7,
@@ -229,7 +232,6 @@ if (deploy){
   const server = https.createServer(sslOptions, app);
   server.listen(port, () => {
     console.log('Backend listening at https://simplifymytext.org:7171');
-  
   });
 } else {
   app.listen(port, ()=>{
