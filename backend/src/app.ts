@@ -8,11 +8,9 @@ import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
 import {createHash} from 'crypto';
 import redisClient from './db';
-
 import { Feedback } from '../types'
-
 import { TargetAudiences } from './types'
-
+import { createApiClient } from './api/apiClient'
 
 dotenv.config();
 
@@ -26,8 +24,7 @@ const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
 const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
-
-
+const apiClient = createApiClient(api_key);
 const extension_token = createHash('sha256').update(TOKEN).digest('hex');
 
 app.use(cors({
@@ -62,7 +59,7 @@ const upload = multer();
 
 // Simplify text based on user group
 const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<string> => {
-  const instructions = "Split long sentences into shorter sentences. The language of the simplified text should match the language of the text I provide you with."
+  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with."
 
   // Map user groups to audience-specific prompts
   const audiencePrompts: Record<TargetAudiences, string> = {
@@ -81,22 +78,11 @@ const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<s
   const audience = audiencePrompts[userGroup];
 
   try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
+    const response = await apiClient.post('', {
         model: "gpt-4",
-        messages: [
-          { role: "system", content: "You are a linguistic expert who specialises in plain lanugage."},
-          { role: "user", content: buildPrompt(audience) }
-        ],
+        messages: [{ role: "user", content: buildPrompt(audience) }],
         max_tokens: 200,
         temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${api_key}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
     return response.data.choices[0].message.content.trim();
