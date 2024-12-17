@@ -15,7 +15,7 @@ import { createApiClient } from './api/apiClient'
 dotenv.config();
 
 const app = express();
-const api_key = process.env.OPENAI_API_KEY || "error" ;
+const apiKey = process.env.OPENAI_API_KEY || "error" ;
 const port = 7171;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
@@ -24,7 +24,6 @@ const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
 const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
-const apiClient = createApiClient(api_key);
 const extension_token = createHash('sha256').update(TOKEN).digest('hex');
 
 app.use(cors({
@@ -58,11 +57,11 @@ app.use(express.json());
 const upload = multer();
 
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<string> => {
+const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string): Promise<string> => {
   const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with."
 
   // Map user groups to audience-specific prompts
-  const audiencePrompts: Record<TargetAudiences, string> = {
+  const targetAudience: Record<TargetAudiences, string> = {
     [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
     [TargetAudiences.StudentsAcademics]: "students and academics",
     [TargetAudiences.IndustryProfessionals]: "industry professionals",
@@ -70,27 +69,34 @@ const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<s
     [TargetAudiences.GeneralPublic]: "the general public (non-expert audience)",
   };
 
-  // Helper function to generate the prompt
-  const buildPrompt = (audience: string): string => 
-    `Simplify the following text for ${audience}:\n\n${text}\n${instructions}`;
-
   // Look up the audience prompt from the Record
-  const audience = audiencePrompts[userGroup];
+  const audience = targetAudience[userGroup];
+
+  // Build the user prompt dynamically
+  const userPrompt = `
+Simplify the following text for ${audience}:
+
+"${text.trim()}"
+
+Instructions: ${instructions}
+  `;
 
   try {
+    const apiClient = createApiClient(apiKey);
+
     const response = await apiClient.post('', {
         model: "gpt-4",
-        messages: [{ role: "user", content: buildPrompt(audience) }],
+        messages: [{ role: "user", content: userPrompt }],
         max_tokens: 200,
         temperature: 0.7
       }
     );
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     console.error(`Error during text simplification: ${errorMessage}`);
-    return `Error during text simplification: ${errorMessage}`;
-  } 
+    throw new Error(`Text simplification failed: ${errorMessage}`);
+  }
 
 };
 
@@ -136,7 +142,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
   }
 
   try {
-    const simplifiedText = await simplifyText(extractedText, audience);
+    const simplifiedText = await simplifyText(extractedText, audience, apiKey);
     await saveToRedis(extractedText, audience, simplifiedText);
     res.json({ simplifiedText });
   } catch (error) {
