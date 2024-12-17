@@ -60,30 +60,25 @@ app.use(express.json());
 
 const upload = multer();
 
-
 // Simplify text based on user group
 const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<string> => {
-  let prompt: string;
-
   const instructions = "Split long sentences into shorter sentences. The language of the simplified text should match the language of the text I provide you with."
 
-  
-  switch (userGroup) {
-    case TargetAudiences.ScientistsResearchers:
-      prompt = `Simplify the following text for scientists and researchers:\n\n${text}.\n${instructions}`;
-      break;
-    case TargetAudiences.StudentsAcademics:
-      prompt = `Simplify the following text for students and academics:\n\n${text}\n${instructions}`;
-      break;
-    case TargetAudiences.IndustryProfessionals:
-      prompt = `Simplify the following text for industry professionals:\n\n${text}\n${instructions}`;
-      break;
-    case TargetAudiences.JournalistsMedia:
-      prompt = `Simplify the following text for journalists and media professionals:\n\n${text}\n${instructions}`;
-      break;
-    default:
-      prompt = `Simplify the following text for the general public (non-expert audience):\n\n${text}\n${instructions}`;
-  }
+  // Map user groups to audience-specific prompts
+  const audiencePrompts: Record<TargetAudiences, string> = {
+    [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
+    [TargetAudiences.StudentsAcademics]: "students and academics",
+    [TargetAudiences.IndustryProfessionals]: "industry professionals",
+    [TargetAudiences.JournalistsMedia]: "journalists and media professionals",
+    [TargetAudiences.GeneralPublic]: "the general public (non-expert audience)",
+  };
+
+  // Helper function to generate the prompt
+  const buildPrompt = (audience: string): string => 
+    `Simplify the following text for ${audience}:\n\n${text}\n${instructions}`;
+
+  // Look up the audience prompt from the Record
+  const audience = audiencePrompts[userGroup];
 
   try {
     const response = await axios.post(
@@ -92,7 +87,7 @@ const simplifyText = async (text: string, userGroup: TargetAudiences): Promise<s
         model: "gpt-4",
         messages: [
           { role: "system", content: "You are a linguistic expert who specialises in plain lanugage."},
-          { role: "user", content: prompt }
+          { role: "user", content: buildPrompt(audience) }
         ],
         max_tokens: 200,
         temperature: 0.7
