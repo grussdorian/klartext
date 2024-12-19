@@ -7,13 +7,13 @@ const InputSection = ({
   setInputMethod,
   inputText,
   setInputText,
-  uploadedFile,
-  setUploadedFile,
+  inputFile,
+  setInputFile,
   handleUploadFile,
   handleSimplifyText,
   isLoading,
-  webpageUrl,
-  setWebpageUrl,
+  inputWebpage,
+  setInputWebpage,
 }) => (
   <div className="mb-4">
     <div className="flex gap-4 mb-4 justify-center">
@@ -69,18 +69,18 @@ const InputSection = ({
               id="file-upload"
               type="file"
               className="hidden"
-              onChange={(e) => setUploadedFile(e.target.files[0])}
+              onChange={(e) => setInputFile(e.target.files[0])}
             />
           </label>
-          {uploadedFile && (
+          {inputFile && (
             <p className="mt-2 text-sm text-gray-600">
-              Selected File: <span className="font-semibold">{uploadedFile.name}</span>
+              Selected File: <span className="font-semibold">{inputFile.name}</span>
             </p>
           )}
         </div>
         <Button
           onClick={handleUploadFile}
-          disabled={isLoading || !uploadedFile}
+          disabled={isLoading || !inputFile}
           className="w-full mt-4"
         >
           {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
@@ -93,12 +93,12 @@ const InputSection = ({
           type="text"
           className="w-full p-2 border rounded-md bg-blue-50 text-gray-800"
           placeholder="Enter webpage URL here..."
-          value={webpageUrl}
-          onChange={(e) => setWebpageUrl(e.target.value)}
+          value={inputWebpage}
+          onChange={(e) => setInputWebpage(e.target.value)}
         />
         <Button
           onClick={handleSimplifyText}
-          disabled={isLoading || !webpageUrl}
+          disabled={isLoading || !inputWebpage}
           className="w-full mt-4"
         >
           {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}

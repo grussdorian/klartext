@@ -20,8 +20,9 @@ const TextSimplifier = () => {
   //Input
   const [inputMethod, setInputMethod] = useState("text");
   const [inputText, setInputText] = useState("");
+  const [inputFile, setInputFile] = useState<File | null>(null);
+  const [inputWebpage, setInputWebpage] = useState("")
   const [audience, setAudience] = useState("general");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   //Output
   const [simplifiedText, setSimplifiedText] = useState("");
@@ -70,7 +71,7 @@ const TextSimplifier = () => {
   };
 
   const handleUploadFile = async () => {
-    if (!uploadedFile) return;
+    if (!inputFile) return;
     setIsLoading(true);
     setError("");
     try {
@@ -78,7 +79,7 @@ const TextSimplifier = () => {
         (opt) => opt.value === audience
       )?.label;
       const formData = new FormData();
-      formData.append("file", uploadedFile);
+      formData.append("file", inputFile);
       formData.append("audience", audienceLabel || "");
 
       const response = await axios.post(`${BASE_URL}/simplify`, formData, {
@@ -161,7 +162,7 @@ const TextSimplifier = () => {
   useEffect(() => {
     // Reset states when the input method changes
     setInputText(""); // Clear any entered text
-    setUploadedFile(null); // Remove any uploaded file
+    setInputFile(null); // Remove any uploaded file
     setSimplifiedText(""); // Clear any previously simplified text
     setFurtherSimplifiedText(""); // Clear any further simplifications
     setSelectedSentence(""); // Clear selected sentence for further simplification
@@ -286,9 +287,11 @@ const TextSimplifier = () => {
               setInputMethod={(method) => setInputMethod(method)}
               inputText={inputText}
               setInputText={setInputText}
-              uploadedFile={uploadedFile}
-              setUploadedFile={setUploadedFile}
+              inputFile={inputFile}
+              setInputFile={setInputFile}
               handleUploadFile={handleUploadFile}
+              inputWebpage={inputWebpage}
+              setInputWebpage={setInputWebpage}
               handleSimplifyText={handleSimplifyText}
               isLoading={isLoading}
             />
