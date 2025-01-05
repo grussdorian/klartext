@@ -26,6 +26,6 @@ export async function validateUrl(inputUrl: string): Promise<void> {
         await axios.head(inputUrl, { timeout: 3000 });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        throw new Error(`Invalid URL: ${errorMessage}`);
+        throw new Error(`Error: ${errorMessage}`);
     }
 }

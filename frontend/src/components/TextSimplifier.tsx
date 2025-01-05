@@ -114,10 +114,14 @@ const TextSimplifier = () => {
   
       setSimplifiedText(response.data.simplifiedText);
     } catch (err: any) {
-      console.log(err);
-      setError(`Failed to simplify URL. ${err.response?.data || "An error occurred."}`);
+      console.error(err);
+  
+      // Check for a response and extract error details if available
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "An error occurred.";
+      setError(`Failed to simplify URL. ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   
 
