@@ -11,6 +11,7 @@ const InputSection = ({
   setInputFile,
   handleUploadFile,
   handleSimplifyText,
+  handleSimplifyWebpage,
   isLoading,
   inputWebpage,
   setInputWebpage,
@@ -97,7 +98,7 @@ const InputSection = ({
           onChange={(e) => setInputWebpage(e.target.value)}
         />
         <Button
-          onClick={handleSimplifyText}
+          onClick={handleSimplifyWebpage}
           disabled={isLoading || !inputWebpage}
           className="w-full mt-4"
         >

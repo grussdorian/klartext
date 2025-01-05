@@ -93,6 +93,34 @@ const TextSimplifier = () => {
     setIsLoading(false);
   };
 
+  const handleSimplifyWebpage = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const audienceLabel = audienceOptions.find(
+        (opt) => opt.value === audience
+      )?.label;
+  
+      if (!inputWebpage) {
+        setError("Please enter a valid URL.");
+        setIsLoading(false);
+        return;
+      }
+  
+      const response = await axios.post(`${BASE_URL}/simplify`, {
+        url: inputWebpage,
+        audience: audienceLabel,
+      });
+  
+      setSimplifiedText(response.data.simplifiedText);
+    } catch (err: any) {
+      console.log(err);
+      setError(`Failed to simplify URL. ${err.response?.data || "An error occurred."}`);
+    }
+    setIsLoading(false);
+  };
+  
+
   const handleWordClick = useCallback(
     async (word: string) => {
       if (!isExpertMode || isLoading) return;
@@ -292,6 +320,7 @@ const TextSimplifier = () => {
               handleUploadFile={handleUploadFile}
               inputWebpage={inputWebpage}
               setInputWebpage={setInputWebpage}
+              handleSimplifyWebpage={handleSimplifyWebpage}
               handleSimplifyText={handleSimplifyText}
               isLoading={isLoading}
             />
