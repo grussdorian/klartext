@@ -191,6 +191,7 @@ const TextSimplifier = () => {
     // Reset states when the input method changes
     setInputText(""); // Clear any entered text
     setInputFile(null); // Remove any uploaded file
+    setInputWebpage(""); // Clear any entered webpage URL
     setSimplifiedText(""); // Clear any previously simplified text
     setFurtherSimplifiedText(""); // Clear any further simplifications
     setSelectedSentence(""); // Clear selected sentence for further simplification
