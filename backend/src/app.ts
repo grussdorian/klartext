@@ -6,16 +6,17 @@ import multer from 'multer';
 import https from 'https';
 import fs from 'fs';
 import { extractTextFromPdf, extractTextFromWord } from './utils/fileUtils';
+import { validateUrl } from './utils/validateUrl'
 import {createHash} from 'crypto';
 import redisClient from './db';
-
 import { Feedback } from '../types'
-
+import { TargetAudiences } from './types'
+import { createApiClient } from './api/apiClient'
 
 dotenv.config();
 
 const app = express();
-const api_key = process.env.OPENAI_API_KEY || "error" ;
+const apiKey = process.env.OPENAI_API_KEY || "error" ;
 const port = 7171;
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || "error";
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || "error";
@@ -24,8 +25,6 @@ const TOKEN = process.env.DEV_TOKEN || "No token provided";
 const allowedOrigin = 'https://simplifymytext.org';
 const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
-
-
 const extension_token = createHash('sha256').update(TOKEN).digest('hex');
 
 app.use(cors({
@@ -58,107 +57,106 @@ app.use(express.json());
 
 const upload = multer();
 
-// Define types for audience options
-type AudienceGroup = "Scientists and Researchers" | "Students and Academics" | "Industry Professionals" | "Journalists and Media Professionals" | "General Public";
-
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: AudienceGroup): Promise<string> => {
-  let prompt: string;
+const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string): Promise<string> => {
+  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else."
 
-  const instructions = "Split long sentences into shorter sentences that are easily understood on their own."
+  // Map user groups to audience-specific prompts
+  const targetAudience: Record<TargetAudiences, string> = {
+    [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
+    [TargetAudiences.StudentsAcademics]: "students and academics",
+    [TargetAudiences.IndustryProfessionals]: "industry professionals",
+    [TargetAudiences.JournalistsMedia]: "journalists and media professionals",
+    [TargetAudiences.GeneralPublic]: "the general public (non-expert audience)",
+  };
 
-  
-  switch (userGroup) {
-    case "Scientists and Researchers":
-      prompt = `Simplify the following text for scientists and researchers:\n\n${text}.\n${instructions}`;
-      break;
-    case "Students and Academics":
-      prompt = `Simplify the following text for students and academics:\n\n${text}\n${instructions}`;
-      break;
-    case "Industry Professionals":
-      prompt = `Simplify the following text for industry professionals:\n\n${text}\n${instructions}`;
-      break;
-    case "Journalists and Media Professionals":
-      prompt = `Simplify the following text for journalists and media professionals:\n\n${text}\n${instructions}`;
-      break;
-    default:
-      prompt = `Simplify the following text for the general public (non-expert audience):\n\n${text}\n${instructions}`;
-  }
+  // Look up the audience prompt from the Record
+  const audience = targetAudience[userGroup];
+
+  // Build the user prompt dynamically
+  const userPrompt = `
+Simplify the following text for ${audience}:
+
+"${text.trim()}"
+
+Instructions: ${instructions}
+  `;
 
   try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
+    const apiClient = createApiClient(apiKey);
+
+    const response = await apiClient.post('', {
         model: "gpt-4",
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userPrompt }],
         max_tokens: 200,
         temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${api_key}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     console.error(`Error during text simplification: ${errorMessage}`);
-    return `Error during text simplification: ${errorMessage}`;
-  } 
+    throw new Error(`Text simplification failed: ${errorMessage}`);
+  }
 
 };
 
-const saveToRedis = async (originalText: string, targetAudience: AudienceGroup, responsePrompt: string) => {
+const saveToRedis = async (originalText: string, targetAudience: TargetAudiences, responsePrompt: string) => {
   const uniqueId = Date.now().toString();
   const key = `prompt|:|${originalText}|:|${targetAudience}|:|${uniqueId}`;
   await redisClient.set(key, responsePrompt);
 };
 
-
 app.post('/simplify', upload.single('file'), async (req: Request, res: Response) => {
   console.log("Simplify request received");
-  const audience = req.body.audience as AudienceGroup;
+
+  const audience = req.body.audience as TargetAudiences;
   const text = req.body.text as string;
   const file = req.file;
+  const url = req.body.url;
 
-  if (!file && !text) {
-    return res.status(400).json({ error: "No text or file provided for simplification." });
-  }
-
-  let extractedText = text;
-
-  if (file) {
-    try {
-      if (file.mimetype === 'application/pdf') {
-        extractedText = await extractTextFromPdf(file.buffer);
-      } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        extractedText = await extractTextFromWord(file.buffer);
-      } else if (file.mimetype === 'text/plain') { 
-        extractedText = file.buffer.toString('utf-8'); 
-      } else {
-        return res.status(400).json({ error: "Unsupported file type" });
-      }
-    } catch (error) {
-      return res.status(500).json({ error: "Error processing file" });
-    }
-  }
-
-  if (!extractedText) {
-    return res.status(400).json({ error: "No text extracted from file" });
-  } else if (extractedText.length > wordLimit) {
-    return res.status(400).json(`Text is too long. Maximum length is ${wordLimit} characters`);
-  }
-
+  // Map input type to processing logic
   try {
-    const simplifiedText = await simplifyText(extractedText, audience);
-    await saveToRedis(extractedText, audience, simplifiedText);
+    const inputText = await (() => {
+      if (file) return handleFileInput(file); // Handle file input
+      if (url) return url; // Use URL directly
+      if (text) return text; // Use text directly
+      throw new Error("No valid input provided"); // Fallback for missing input
+    })();
+
+    // Validate input length for text (not URL)
+    if (!url && inputText.length > wordLimit) {
+      return res.status(400).json({ error: `Text exceeds the word limit of ${wordLimit} characters.` });
+    } else if (url) {
+      await validateUrl(url);
+    }
+
+    // Simplify input and cache result
+    const simplifiedText = await simplifyText(inputText, audience, apiKey);
+    await saveToRedis(inputText, audience, simplifiedText);
+
+    // Respond with simplified text
     res.json({ simplifiedText });
   } catch (error) {
-    res.status(500).json({ error: "Error during text simplification" });
+    console.error("Error in /simplify endpoint:", error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    res.status(500).json({ error: errorMessage || "An error occurred during text simplification." });
   }
 });
+
+// Separate function to handle file input
+async function handleFileInput(file: Express.Multer.File): Promise<string> {
+  switch (file.mimetype) {
+    case 'application/pdf':
+      return extractTextFromPdf(file.buffer);
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      return extractTextFromWord(file.buffer);
+    case 'text/plain':
+      return file.buffer.toString('utf-8');
+    default:
+      throw new Error("Unsupported file type");
+  }
+}
 
 
 app.get("/word-info", async (req: Request, res: Response) => {
@@ -168,23 +166,20 @@ app.get("/word-info", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "No word provided" });
   }
 
+  const userPrompt = `
+  Provide the following details for the word "${word}":
+  1. A clear and concise definition in plain language. If no definition exists, say "No definitions found."
+  2. A list of synonyms (if any). If there are no synonyms, say "No synonyms found."
+`;
+
   try {
-    const prompt = `
-      Provide the following details for the word "${word}":
-      1. A clear and concise definition.
-      2. A list of synonyms (if any). If there are no synonyms, say "No synonyms found."
-    `;
+    const apiClient = createApiClient(apiKey);
 
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
+    const response = await apiClient.post('', {
         model: "gpt-4",
-        messages: [
-          { role: "system", content: "You are an English language assistant." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-
+        messages: [{ role: "user", content: userPrompt }],
+        max_tokens: 200,
+        temperature: 0.7
       }
     );
 
@@ -229,7 +224,6 @@ if (deploy){
   const server = https.createServer(sslOptions, app);
   server.listen(port, () => {
     console.log('Backend listening at https://simplifymytext.org:7171');
-  
   });
 } else {
   app.listen(port, ()=>{

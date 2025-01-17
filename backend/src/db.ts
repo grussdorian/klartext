@@ -1,16 +1,20 @@
 import { createClient } from 'redis';
 import dotenv from 'dotenv';
 dotenv.config();
+
+const username = process.env.REDIS_USERNAME || 'scads';
+const password = process.env.REDIS_PASSWORD || 'error';
+
 const DEPLOY = process.env.DEPLOY === 'false' ? false : true;
-const REDIS_PASSWORD = process.env.REDIS_PASSWORD || 'error';
-if (DEPLOY && REDIS_PASSWORD === 'error') {
+
+if (DEPLOY && password === 'error') {
   throw new Error('Redis password not provided');
 }
-const username = process.env.REDIS_USERNAME || 'scads';
+
 const redisClient = createClient(
   {
     username: username,
-    password: REDIS_PASSWORD,
+    password: password,
   }
 );
 
