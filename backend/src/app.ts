@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from 'express';
-import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import multer from 'multer';
@@ -12,6 +11,8 @@ import redisClient from './db';
 import { Feedback } from '../types'
 import { TargetAudiences } from './types'
 import { createApiClient } from './api/apiClient'
+import cookieParser from 'cookie-parser';
+import { createSession, checkCookie } from './session/session';
 
 dotenv.config();
 
@@ -26,6 +27,15 @@ const allowedOrigin = 'https://simplifymytext.org';
 const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
 const extension_token = createHash('sha256').update(TOKEN).digest('hex');
+const sk = process.env.SK || "error";
+// extend the Request interface to include cookies
+interface CustomRequest extends Request {
+  cookies: { [key: string]: string };
+}
+
+app.set('trust proxy', true); // Trust the first proxy
+app.use(cookieParser(sk));
+
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -214,6 +224,15 @@ app.post('/feedback', (req: Request, res: Response) => {
 
 app.get('/', (req: Request, res: Response) => {
   res.send('<h1>Server Working</h1>');
+});
+
+app.get('/set-cookie', async (req: CustomRequest, res: Response) => {
+  if (!checkCookie(req)) {
+    await createSession(req, res);
+    res.send('Session created');
+  } else {
+    res.send('Session already exists');
+  }
 });
 
 if (deploy){
