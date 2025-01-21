@@ -35,7 +35,7 @@ const InputSection = ({
             ? "Text Input"
             : method === "upload"
             ? "Upload Document"
-            : "Webpage"}
+            : "Link"}
         </Button>
       ))}
     </div>

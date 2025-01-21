@@ -45,7 +45,8 @@ app.use(cors({
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true
 }));
 
 // Middleware to check the origin of incoming requests
@@ -227,12 +228,9 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.get('/set-cookie', async (req: CustomRequest, res: Response) => {
-  if (!checkCookie(req)) {
-    await createSession(req, res);
-    res.send('Session created');
-  } else {
-    res.send('Session already exists');
-  }
+  // console.log(req.signedCookies);
+  await createSession(req as CustomRequest, res);
+  return res.status(200).send('Cookie set');
 });
 
 if (deploy){

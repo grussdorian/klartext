@@ -8,14 +8,15 @@ import { Request, Response } from 'express';
 import redisClient from '../db';
 import crypto from 'crypto';
 
-// extend the Request interface to include cookies
+// extend the Request interface to include signed cookies
 interface CustomRequest extends Request {
     cookies: { [key: string]: string };
 }
 
-// function to check if a cookie is present
+// function to check if a signed cookie named 'userID' is present
 export function checkCookie(req: CustomRequest): boolean {
-    return req.cookies !== undefined && Object.keys(req.cookies).length > 0;
+    console.log(`cookie present? ${req.signedCookies !== undefined && req.signedCookies.userID !== undefined}`);
+    return req.signedCookies !== undefined && req.signedCookies.userID !== undefined;
 }
 
 // function to add a new user to the redis database
@@ -23,33 +24,26 @@ async function insertUser(clientFingerprint: string): Promise<void> {
     await redisClient.sAdd('users', clientFingerprint);
 }
 
-// function to create fingerprint from user's metadata
+// function to create fingerprint from rabdom data
 function createFingerprint(req: CustomRequest): string {
-  const ipAddress = req.ip;
-  const data = [
-      ipAddress ?? '',
-      req.headers['user-agent'] ?? '',
-      req.headers['accept-language'] ?? '',
-      req.headers['accept-encoding'] ?? '',
-      req.headers['accept'] ?? '',
-      req.headers['connection'] ?? '',
-      req.headers['dnt'] ?? '',
-      req.headers['upgrade-insecure-requests'] ?? '',
-      req.headers['sec-fetch-site'] ?? '',
-      req.headers['sec-fetch-mode'] ?? '',
-      req.headers['sec-fetch-dest'] ?? '',
-      req.headers['referer'] ?? '',
-      req.headers['host'] ?? ''
-  ].join('');
-
-  return crypto.createHash('sha256').update(data).digest('hex');
+    const data = Math.random().toString(16).slice(2)
+    return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 // function to handle session creation
 export async function createSession(req: CustomRequest, res: Response): Promise<void> {
     if (!checkCookie(req)) {
-        const clientFingerprint = createFingerprint(req);
-        await insertUser(clientFingerprint);
-        res.cookie('userID', clientFingerprint, { signed: true, httpOnly: true, secure: true });
+      const clientFingerprint = createFingerprint(req);
+      const expires = new Date( Date.now() + 1000 * 60 * 60 * 24 * 30 * 9 ); // 9 months
+      console.log(`Expiry date: ${expires}`);
+      await insertUser(clientFingerprint);
+      console.log('Creating new user');
+        res.cookie('userID', clientFingerprint, { 
+            signed: true,
+            httpOnly: true,
+            secure: true,
+            expires: expires,
+            sameSite: 'none' // Allow cross-site access
+        });
     }
 }
