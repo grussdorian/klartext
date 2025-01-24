@@ -44,7 +44,7 @@ const TextSimplifier = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   //Feedback
-  const defaultFeedback = { rating: 5, text: "" };
+  const defaultFeedback = { rating: 5, text: "", context: "", category: audienceOptions[audienceOptions.length - 1].label, simplifiedText: "" };
   const [feedback, setFeedback] = useState<Feedback>(defaultFeedback)
 
   // Misc
@@ -183,7 +183,15 @@ const TextSimplifier = () => {
 
   const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/feedback`, feedback);
+      const feedbackData = {
+        ...feedback,
+        context: inputText,
+        category: audienceOptions.find((opt) => opt.value === audience)?.label || "",
+        simplifiedText: simplifiedText,
+      };
+      await axios.post(`${BASE_URL}/feedback`, feedbackData, {
+        withCredentials: true,
+      });
       alert("Rating and feedback sent successfully!");
       setFeedback(defaultFeedback); // Clear feedback after submission
     } catch {

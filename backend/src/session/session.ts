@@ -15,7 +15,7 @@ interface CustomRequest extends Request {
 
 // function to check if a signed cookie named 'userID' is present
 export function checkCookie(req: CustomRequest): boolean {
-    if (process.env.NODE_ENV === 'deploy') {
+    if (process.env.COOKIE === 'deploy') {
         console.log(`cookie present? ${req.signedCookies !== undefined && req.signedCookies.userID !== undefined}`);
         return req.signedCookies !== undefined && req.signedCookies.userID !== undefined;
     }
@@ -45,11 +45,11 @@ export async function createSession(req: CustomRequest, res: Response): Promise<
       await insertUser(clientFingerprint);
       console.log('Creating new user');
         res.cookie('userID', clientFingerprint, { 
-            signed: false,
+            signed: process.env.COOKIE === 'deploy' ? true : false,
             httpOnly: true,
             expires: expires,
-            secure: process.env.NODE_ENV === 'deploy' ? true : false,
-            sameSite: process.env.NODE_ENV === 'deploy' ? 'none' : 'lax', // Allow cross-site access,
+            secure: process.env.COOKIE === 'deploy' ? true : false,
+            sameSite: process.env.COOKIE === 'deploy' ? 'none' : 'lax', // Allow cross-site access,
         });
     }
 }
