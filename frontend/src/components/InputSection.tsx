@@ -15,6 +15,7 @@ const InputSection = ({
   isLoading,
   inputWebpage,
   setInputWebpage,
+  t
 }) => (
   <div className="mb-4">
     <div className="flex gap-4 mb-4 justify-center">
@@ -32,10 +33,10 @@ const InputSection = ({
             <Globe className="mr-2 h-4 w-4" />
           )}
           {method === "text"
-            ? "Text Input"
+            ? t("Text Input")
             : method === "upload"
-            ? "Upload Document"
-            : "Link"}
+            ? t("Upload Document")
+            : t("Link")}
         </Button>
       ))}
     </div>
@@ -44,7 +45,7 @@ const InputSection = ({
       <>
         <textarea
           className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800"
-          placeholder="Enter text to simplify..."
+          placeholder={t("Enter text to simplify here...")}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
         />
@@ -54,7 +55,7 @@ const InputSection = ({
           className="w-full mt-4"
         >
           {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-          Simplify Text
+          {t("Simplify Text")}
         </Button>
       </>
     ) : inputMethod === "upload" ? (
@@ -65,7 +66,7 @@ const InputSection = ({
             className="flex flex-col items-center justify-center cursor-pointer text-gray-500 hover:text-gray-700"
           >
             <Upload className="h-8 w-8 mb-2 text-gray-500" />
-            <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
+            <span className="text-sm font-medium">{t("Drag & Drop or Click to Upload")}</span>
             <input
               id="file-upload"
               type="file"
@@ -75,7 +76,7 @@ const InputSection = ({
           </label>
           {inputFile && (
             <p className="mt-2 text-sm text-gray-600">
-              Selected File: <span className="font-semibold">{inputFile.name}</span>
+              {t("Selected File")}: <span className="font-semibold">{inputFile.name}</span>
             </p>
           )}
         </div>
@@ -85,7 +86,7 @@ const InputSection = ({
           className="w-full mt-4"
         >
           {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-          Simplify Document
+          {t("Simplify Document")}
         </Button>
       </>
     ) : (
@@ -93,7 +94,7 @@ const InputSection = ({
         <input
           type="text"
           className="w-full p-2 border rounded-md bg-blue-50 text-gray-800"
-          placeholder="Enter webpage URL here..."
+          placeholder={t("Enter webpage URL here...")}
           value={inputWebpage}
           onChange={(e) => setInputWebpage(e.target.value)}
         />
@@ -103,7 +104,7 @@ const InputSection = ({
           className="w-full mt-4"
         >
           {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-          Simplify Webpage
+          {t("Simplify Webpage")}
         </Button>
       </>
     )}
