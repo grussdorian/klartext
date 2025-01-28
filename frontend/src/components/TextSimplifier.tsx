@@ -17,6 +17,7 @@ import InputSection from "./InputSection";
 import AudienceSelector from "./TargetAudience";
 import OutputSection from "./OutputSection";
 import RatingSection from "./RatingSection";
+import LanguageSelector from "./LanguageSelector";
 
 const TextSimplifier = () => {
   //Input
@@ -324,6 +325,7 @@ const TextSimplifier = () => {
     <div className="flex justify-center items-start"> {/* Ensure content is centered */}
       <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
         <Card className="mb-4">
+          <LanguageSelector />  
           <CardHeader>
             <CardTitle>{t("Klartext: AI-based Translation of Websites Into Plain Language")}</CardTitle>
           </CardHeader>
