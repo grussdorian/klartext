@@ -33,9 +33,9 @@ const InputSection = ({
             <Globe className="mr-2 h-4 w-4" />
           )}
           {method === "text"
-            ? t("Text Input")
+            ? t("Text")
             : method === "upload"
-            ? t("Upload Document")
+            ? t("Document")
             : t("Link")}
         </Button>
       ))}

@@ -20,7 +20,8 @@ i18n
     },
     backend: {
         loadPath: 'src/locales/{{lng}}/{{ns}}.json'
-      }       
+    },
+    supportedLngs: ['en', 'de', 'fr', 'ar', 'hi'],       
   });
 
 export default i18n;
