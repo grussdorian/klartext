@@ -3,13 +3,23 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klartext</title>
 </head>
 
 <body>
   <div id="root"></div>
+  <script>
+    fetch('/set-cookie', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(response => response.text())
+    .then(data => {
+      console.log(data);
+    })
+    .catch(error => console.error(error));
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

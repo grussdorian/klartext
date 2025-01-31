@@ -2,6 +2,8 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 
+import { useTranslation } from 'react-i18next';
+
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Alert } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -15,6 +17,7 @@ import InputSection from "./InputSection";
 import AudienceSelector from "./TargetAudience";
 import OutputSection from "./OutputSection";
 import RatingSection from "./RatingSection";
+import LanguageSelector from "./LanguageSelector";
 
 const TextSimplifier = () => {
   //Input
@@ -44,12 +47,15 @@ const TextSimplifier = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   //Feedback
-  const defaultFeedback = { rating: 5, text: "" };
+  const defaultFeedback = { rating: 5, text: "", context: "", category: audienceOptions[audienceOptions.length - 1].label, simplifiedText: "" };
   const [feedback, setFeedback] = useState<Feedback>(defaultFeedback)
 
   // Misc
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Localisation (i18n)
+  const { t } = useTranslation();
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
@@ -100,22 +106,22 @@ const TextSimplifier = () => {
       const audienceLabel = audienceOptions.find(
         (opt) => opt.value === audience
       )?.label;
-  
+
       if (!inputWebpage) {
         setError("Please enter a valid URL.");
         setIsLoading(false);
         return;
       }
-  
+
       const response = await axios.post(`${BASE_URL}/simplify`, {
         url: inputWebpage,
         audience: audienceLabel,
       });
-  
+
       setSimplifiedText(response.data.simplifiedText);
     } catch (err: any) {
       console.error(err);
-  
+
       // Check for a response and extract error details if available
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "An error occurred.";
       setError(`Failed to simplify URL. ${errorMessage}`);
@@ -123,7 +129,7 @@ const TextSimplifier = () => {
       setIsLoading(false);
     }
   };
-  
+
 
   const handleWordClick = useCallback(
     async (word: string) => {
@@ -183,7 +189,15 @@ const TextSimplifier = () => {
 
   const handleFeedbackSubmit = async () => {
     try {
-      await axios.post(`${BASE_URL}/feedback`, feedback);
+      const feedbackData = {
+        ...feedback,
+        context: inputText,
+        category: audienceOptions.find((opt) => opt.value === audience)?.label || "",
+        simplifiedText: simplifiedText,
+      };
+      await axios.post(`${BASE_URL}/feedback`, feedbackData, {
+        withCredentials: true,
+      });
       alert("Rating and feedback sent successfully!");
       setFeedback(defaultFeedback); // Clear feedback after submission
     } catch {
@@ -280,6 +294,7 @@ const TextSimplifier = () => {
       const response = await axios.post(`${BASE_URL}/simplify`, {
         text: sentence,
         audience: audienceLabel,
+        context: simplifiedText,
       });
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
     } catch (err: any) {
@@ -311,8 +326,9 @@ const TextSimplifier = () => {
     <div className="flex justify-center items-start"> {/* Ensure content is centered */}
       <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
         <Card className="mb-4">
+          <LanguageSelector />  
           <CardHeader>
-            <CardTitle>Klartext: AI-based Translation of Websites Into Plain Language</CardTitle>
+            <CardTitle>{t("Klartext: AI-based Translation of Websites Into Plain Language")}</CardTitle>
           </CardHeader>
           <CardContent>
             <InputSection
@@ -328,9 +344,14 @@ const TextSimplifier = () => {
               handleSimplifyWebpage={handleSimplifyWebpage}
               handleSimplifyText={handleSimplifyText}
               isLoading={isLoading}
+              t={t}
             />
 
-            <AudienceSelector audience={audience} setAudience={setAudience} />
+            <AudienceSelector
+              audience={audience}
+              setAudience={setAudience}
+              t={t}
+            />
 
             {error && <Alert variant="destructive">{error}</Alert>}
             {simplifiedText && (
@@ -346,7 +367,7 @@ const TextSimplifier = () => {
 
                 {/* Show Advanced Options Button */}
                 <div className="flex items-center gap-4 mt-4">
-                  <span className="text-gray-700 font-medium">Expert Mode</span>
+                  <span className="text-gray-700 font-medium">{t("Expert Mode")}</span>
                   <div
                     onClick={toggleExpertMode}
                     className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
@@ -362,8 +383,7 @@ const TextSimplifier = () => {
                 {isExpertMode && (
                   <div className="text-gray-600 mt-2">
                     <p>
-                      In Expert Mode, click on words for definitions and synonyms, and double-click
-                      sentences for further simplification.
+                      {t("In Expert Mode, click on words for definitions and synonyms, and double-click sentences for further simplification.")}
                     </p>
                   </div>
                 )}
@@ -371,20 +391,20 @@ const TextSimplifier = () => {
                 {/* Further Simplification Section */}
                 {isExpertMode && furtherSimplifiedText && (
                   <div className="p-4 bg-green-50 rounded-md mt-4">
-                    <h3 className="text-lg font-semibold">Further Simplified Sentence:</h3>
+                    <h3 className="text-lg font-semibold">{t("Further Simplified Sentence")}</h3>
                     <p>{furtherSimplifiedText}</p>
                     <Button onClick={handleUpdateSimplifiedText} className="mt-2">
-                      Replace Selected Sentence
+                      {t("Replace Selected Sentence")}
                     </Button>
                   </div>
                 )}
 
                 {/* Conditionally render RatingSection when simplifiedText exists */}
                 <RatingSection
-
                   feedback={feedback}
                   setFeedback={setFeedback}
                   handleFeedbackSubmit={handleFeedbackSubmit}
+                  t={t}
                 />
               </>
             )}
@@ -414,7 +434,7 @@ const TextSimplifier = () => {
           }}
         >
           <p className="mb-4 text-gray-700">
-            Replace all occurrences of this word with {" "}
+            {t("Replace all occurrences of this word with")} {" "}
             <span className="font-semibold">"{currentSynonym}"</span>?
           </p>
           <div className="flex justify-end space-x-2">
@@ -422,13 +442,13 @@ const TextSimplifier = () => {
               onClick={() => handleUserChoice(true)}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
             >
-              OK
+              {t("OK")}
             </button>
             <button
               onClick={() => handleUserChoice(false)}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 focus:outline-none"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </div>

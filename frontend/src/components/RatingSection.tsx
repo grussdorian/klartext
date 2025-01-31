@@ -2,9 +2,9 @@ import React from "react";
 import { Slider } from "./ui/slider";
 import { Button } from "./ui/button";
 
-const RatingSection = ({ feedback, setFeedback, handleFeedbackSubmit }) => (
+const RatingSection = ({ feedback, setFeedback, handleFeedbackSubmit, t }) => (
   <div className="mt-4">
-    <p className="mb-2">How helpful was this simplification?</p>
+    <p className="mb-2">{t("How helpful was this simplification?")}</p>
     <div className="flex items-center gap-4">
       <Slider
         value={[feedback.rating]}
@@ -18,12 +18,12 @@ const RatingSection = ({ feedback, setFeedback, handleFeedbackSubmit }) => (
     <textarea
       className="w-full h-32 p-2 border rounded-md bg-blue-50 text-gray-800"
       rows={3} 
-      placeholder="Enter your feedback here..."
+      placeholder={t("Enter your feedback here...")}
       value={feedback.text}
       onChange={(e) => setFeedback({ ...feedback, text: e.target.value })}
     />
     <Button onClick={handleFeedbackSubmit} className="w-full mt-4">
-      Submit Feedback
+      {t("Submit Feedback")}
     </Button>
   </div>
 );

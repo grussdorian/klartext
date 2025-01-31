@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from 'express';
-import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import multer from 'multer';
@@ -12,6 +11,8 @@ import redisClient from './db';
 import { Feedback } from '../types'
 import { TargetAudiences } from './types'
 import { createApiClient } from './api/apiClient'
+import cookieParser from 'cookie-parser';
+import { createSession, checkCookie } from './session/session';
 
 dotenv.config();
 
@@ -26,6 +27,15 @@ const allowedOrigin = 'https://simplifymytext.org';
 const allowedExtension = process.env.EXTENSION_ID || 'error';
 const wordLimit = Number(process.env.WORD_LIMIT) || 5000;
 const extension_token = createHash('sha256').update(TOKEN).digest('hex');
+const sk = process.env.SK || "error";
+// extend the Request interface to include cookies
+interface CustomRequest extends Request {
+  cookies: { [key: string]: string };
+}
+
+app.set('trust proxy', true); // Trust the first proxy
+app.use(cookieParser(sk));
+
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -35,7 +45,8 @@ app.use(cors({
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true
 }));
 
 // Middleware to check the origin of incoming requests
@@ -58,10 +69,8 @@ app.use(express.json());
 const upload = multer();
 
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string): Promise<string> => {
-  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else."
-
-  // Map user groups to audience-specific prompts
+const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string, context?: string): Promise<string> => {
+  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else. do not add any special characters, symbols or quotation marks unless the original input text contains it.";
   const targetAudience: Record<TargetAudiences, string> = {
     [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
     [TargetAudiences.StudentsAcademics]: "students and academics",
@@ -70,11 +79,8 @@ const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: st
     [TargetAudiences.GeneralPublic]: "the general public (non-expert audience)",
   };
 
-  // Look up the audience prompt from the Record
   const audience = targetAudience[userGroup];
-
-  // Build the user prompt dynamically
-  const userPrompt = `
+  const basePrompt = `
 Simplify the following text for ${audience}:
 
 "${text.trim()}"
@@ -82,23 +88,32 @@ Simplify the following text for ${audience}:
 Instructions: ${instructions}
   `;
 
+  const furtherSimplifyInstructions = "Do not write very long sentences, your response should be very brief. The language of the simplified text should match the language of the text I provide you with. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and please make your response as brief as possible. Do not add any special characters, symbols or quotation marks unless the original input text contains it";
+  const furtherSimplifyPrompt = `
+Simplify the following text for ${audience} based on the context provided:
+
+text to simplify: "${text.trim()}"
+
+Instructions: ${furtherSimplifyInstructions}
+Context: ${context}
+  `;
+
+  const userPrompt = context ? furtherSimplifyPrompt : basePrompt;
+
   try {
     const apiClient = createApiClient(apiKey);
-
     const response = await apiClient.post('', {
-        model: "gpt-4",
-        messages: [{ role: "user", content: userPrompt }],
-        max_tokens: 200,
-        temperature: 0.7
-      }
-    );
+      model: "gpt-4",
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 200,
+      temperature: 0.7,
+    });
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     console.error(`Error during text simplification: ${errorMessage}`);
     throw new Error(`Text simplification failed: ${errorMessage}`);
   }
-
 };
 
 const saveToRedis = async (originalText: string, targetAudience: TargetAudiences, responsePrompt: string) => {
@@ -114,6 +129,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
   const text = req.body.text as string;
   const file = req.file;
   const url = req.body.url;
+  const context = req.body.context as string;
 
   // Map input type to processing logic
   try {
@@ -132,7 +148,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     }
 
     // Simplify input and cache result
-    const simplifiedText = await simplifyText(inputText, audience, apiKey);
+    const simplifiedText = await simplifyText(inputText, audience, apiKey, context);
     await saveToRedis(inputText, audience, simplifiedText);
 
     // Respond with simplified text
@@ -199,21 +215,43 @@ app.get("/word-info", async (req: Request, res: Response) => {
 
 
 // Feedback
-app.post('/feedback', (req: Request, res: Response) => {
-  const { rating, text }: Feedback = req.body
-
+app.post('/feedback', (req: CustomRequest, res: Response) => {
+  console.log("Feedback received");
+  const { rating, text, context, category, simplifiedText }: Feedback = req.body
+  console.log("req: ", req);
+  if (!checkCookie(req)) {
+    return res.status(400).json({ error: "User not authenticated" });
+  }
+  const userID = process.env.COOKIE === 'deploy' ? req.signedCookies.userID : req.cookies.userID;
+  console.log("User ID: ", userID);
+  if (userID === undefined || userID === null) {
+    return res.status(400).json({ error: "User not authenticated" });
+  }
+  
   if (isNaN(rating) || rating < 1 || rating > 10) {
     return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
   }
 
   console.log("User rated:", rating);
-  console.log("User feedback: ", text)
-  // Future: Save rating to a database if needed
+  console.log("User feedback: ", text);
+  console.log("User context: ", context);
+  console.log("User category: ", category);
+  console.log("Simplified text: ", simplifiedText);
+  // save data to redis database. With every user there's a set of feedback objects
+  const key = `feedback|:|${userID}`;
+  const feedback = { rating, text, context, category, simplifiedText };
+  redisClient.sAdd(key, JSON.stringify(feedback));
   res.status(200).json({ message: "Rating submitted successfully" });
 });
 
 app.get('/', (req: Request, res: Response) => {
   res.send('<h1>Server Working</h1>');
+});
+
+app.get('/set-cookie', async (req: CustomRequest, res: Response) => {
+  // console.log(req.signedCookies);
+  await createSession(req as CustomRequest, res);
+  return res.status(200).send('Cookie set');
 });
 
 if (deploy){
