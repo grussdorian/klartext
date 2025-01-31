@@ -69,10 +69,8 @@ app.use(express.json());
 const upload = multer();
 
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string): Promise<string> => {
-  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else."
-
-  // Map user groups to audience-specific prompts
+const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string, context?: string): Promise<string> => {
+  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else. do not add any special characters, symbols or quotation marks unless the original input text contains it.";
   const targetAudience: Record<TargetAudiences, string> = {
     [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
     [TargetAudiences.StudentsAcademics]: "students and academics",
@@ -81,11 +79,8 @@ const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: st
     [TargetAudiences.GeneralPublic]: "the general public (non-expert audience)",
   };
 
-  // Look up the audience prompt from the Record
   const audience = targetAudience[userGroup];
-
-  // Build the user prompt dynamically
-  const userPrompt = `
+  const basePrompt = `
 Simplify the following text for ${audience}:
 
 "${text.trim()}"
@@ -93,23 +88,32 @@ Simplify the following text for ${audience}:
 Instructions: ${instructions}
   `;
 
+  const furtherSimplifyInstructions = "Do not write very long sentences, your response should be very brief. The language of the simplified text should match the language of the text I provide you with. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and please make your response as brief as possible. Do not add any special characters, symbols or quotation marks unless the original input text contains it";
+  const furtherSimplifyPrompt = `
+Simplify the following text for ${audience} based on the context provided:
+
+text to simplify: "${text.trim()}"
+
+Instructions: ${furtherSimplifyInstructions}
+Context: ${context}
+  `;
+
+  const userPrompt = context ? furtherSimplifyPrompt : basePrompt;
+
   try {
     const apiClient = createApiClient(apiKey);
-
     const response = await apiClient.post('', {
-        model: "gpt-4",
-        messages: [{ role: "user", content: userPrompt }],
-        max_tokens: 200,
-        temperature: 0.7
-      }
-    );
+      model: "gpt-4",
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 200,
+      temperature: 0.7,
+    });
     return response.data.choices[0].message.content.trim();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     console.error(`Error during text simplification: ${errorMessage}`);
     throw new Error(`Text simplification failed: ${errorMessage}`);
   }
-
 };
 
 const saveToRedis = async (originalText: string, targetAudience: TargetAudiences, responsePrompt: string) => {
@@ -125,6 +129,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
   const text = req.body.text as string;
   const file = req.file;
   const url = req.body.url;
+  const context = req.body.context as string;
 
   // Map input type to processing logic
   try {
@@ -143,7 +148,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     }
 
     // Simplify input and cache result
-    const simplifiedText = await simplifyText(inputText, audience, apiKey);
+    const simplifiedText = await simplifyText(inputText, audience, apiKey, context);
     await saveToRedis(inputText, audience, simplifiedText);
 
     // Respond with simplified text
