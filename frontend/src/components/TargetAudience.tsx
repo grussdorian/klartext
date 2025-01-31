@@ -4,7 +4,7 @@ import { audienceOptions } from "../utils/constants";
 
 const TargetAudience = ({ audience, setAudience, t }) => (
   <Select value={audience} onValueChange={setAudience}>
-    <SelectTrigger>
+    <SelectTrigger className="w-72">
       <SelectValue placeholder={t("Select target audience")} />
     </SelectTrigger>
     <SelectContent>

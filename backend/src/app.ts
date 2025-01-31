@@ -9,7 +9,7 @@ import { validateUrl } from './utils/validateUrl'
 import {createHash} from 'crypto';
 import redisClient from './db';
 import { Feedback } from '../types'
-import { TargetAudiences } from './types'
+import { TargetAudiences, OpenAILanguage } from './types'
 import { createApiClient } from './api/apiClient'
 import cookieParser from 'cookie-parser';
 import { createSession, checkCookie } from './session/session';
@@ -69,8 +69,12 @@ app.use(express.json());
 const upload = multer();
 
 // Simplify text based on user group
-const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string): Promise<string> => {
-  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else."
+const simplifyText = async (text: string, userGroup: TargetAudiences, outputLanguage: string, apiKey: string): Promise<string> => {
+  const instructions = `Do no write long sentences.
+  If the provided text is a URL, you need to visit the URL, summarise the contents, 
+  and finally simplify the summary into plain language.
+  If I provide you with a language, you need to first simplify the text into plain language and then translate it into the provided language.
+  Your response should only the contain the summary and nothing else.`
 
   // Map user groups to audience-specific prompts
   const targetAudience: Record<TargetAudiences, string> = {
@@ -91,6 +95,8 @@ Simplify the following text for ${audience}:
 "${text.trim()}"
 
 Instructions: ${instructions}
+
+Language: ${outputLanguage}
   `;
 
   try {
@@ -125,6 +131,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
   const text = req.body.text as string;
   const file = req.file;
   const url = req.body.url;
+  const outputLanguage = req.body.language as string;
 
   // Map input type to processing logic
   try {
@@ -143,7 +150,7 @@ app.post('/simplify', upload.single('file'), async (req: Request, res: Response)
     }
 
     // Simplify input and cache result
-    const simplifiedText = await simplifyText(inputText, audience, apiKey);
+    const simplifiedText = await simplifyText(inputText, audience, outputLanguage, apiKey);
     await saveToRedis(inputText, audience, simplifiedText);
 
     // Respond with simplified text

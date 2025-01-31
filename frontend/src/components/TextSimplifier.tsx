@@ -26,6 +26,7 @@ const TextSimplifier = () => {
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [inputWebpage, setInputWebpage] = useState("")
   const [audience, setAudience] = useState("general");
+  const [outputLanguage, setOutputLanguage] = useState("en");
 
   //Output
   const [simplifiedText, setSimplifiedText] = useState("");
@@ -67,6 +68,7 @@ const TextSimplifier = () => {
       const response = await axios.post(`${BASE_URL}/simplify`, {
         text: inputText,
         audience: audienceLabel,
+        language: outputLanguage || null,
       });
       setSimplifiedText(response.data.simplifiedText);
     } catch (err: any) {
@@ -87,6 +89,7 @@ const TextSimplifier = () => {
       const formData = new FormData();
       formData.append("file", inputFile);
       formData.append("audience", audienceLabel || "");
+      formData.append("language", outputLanguage || null);
 
       const response = await axios.post(`${BASE_URL}/simplify`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -116,6 +119,7 @@ const TextSimplifier = () => {
       const response = await axios.post(`${BASE_URL}/simplify`, {
         url: inputWebpage,
         audience: audienceLabel,
+        language: outputLanguage || null,
       });
 
       setSimplifiedText(response.data.simplifiedText);
@@ -294,6 +298,7 @@ const TextSimplifier = () => {
       const response = await axios.post(`${BASE_URL}/simplify`, {
         text: sentence,
         audience: audienceLabel,
+        language: outputLanguage || null,
       });
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
     } catch (err: any) {
@@ -343,10 +348,8 @@ const TextSimplifier = () => {
               handleSimplifyWebpage={handleSimplifyWebpage}
               handleSimplifyText={handleSimplifyText}
               isLoading={isLoading}
-              t={t}
-            />
-
-            <AudienceSelector
+              outputLanguage={outputLanguage}
+              setOutputLanguage={setOutputLanguage}
               audience={audience}
               setAudience={setAudience}
               t={t}
