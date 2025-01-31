@@ -7,7 +7,7 @@ import {
     SelectItem,
     SelectValue,
     SelectGroup,
-} from "./ui/select"; // Adjust the import path
+} from "./ui/select";
 
 const LanguageSelector = () => {
     const { i18n } = useTranslation();
@@ -28,7 +28,7 @@ const LanguageSelector = () => {
         <div className="absolute top-4 right-4">
             <Select onValueChange={handleLanguageChange}>
                 <SelectTrigger className="w-44">
-                    <SelectValue placeholder="Select Language" />
+                    <SelectValue placeholder="Website Language" />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectGroup>
