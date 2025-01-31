@@ -299,6 +299,7 @@ const TextSimplifier = () => {
         text: sentence,
         audience: audienceLabel,
         language: outputLanguage || null,
+        context: simplifiedText,
       });
       setFurtherSimplifiedText(response.data.simplifiedText); // Set the further simplified text
     } catch (err: any) {
@@ -393,7 +394,7 @@ const TextSimplifier = () => {
                 {/* Further Simplification Section */}
                 {isExpertMode && furtherSimplifiedText && (
                   <div className="p-4 bg-green-50 rounded-md mt-4">
-                    <h3 className="text-lg font-semibold">{t("Further Simplified Sentence:")}</h3>
+                    <h3 className="text-lg font-semibold">{t("Further Simplified Sentence")}</h3>
                     <p>{furtherSimplifiedText}</p>
                     <Button onClick={handleUpdateSimplifiedText} className="mt-2">
                       {t("Replace Selected Sentence")}

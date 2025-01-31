@@ -25,7 +25,7 @@ const LanguageSelector = () => {
     ];
 
     return (
-        <div className="absolute top-4 right-4">
+        <div className="flex justify-end">
             <Select onValueChange={handleLanguageChange}>
                 <SelectTrigger className="w-44">
                     <SelectValue placeholder="Website Language" />
