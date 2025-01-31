@@ -70,7 +70,13 @@ const upload = multer();
 
 // Simplify text based on user group
 const simplifyText = async (text: string, userGroup: TargetAudiences, apiKey: string, context?: string): Promise<string> => {
-  const instructions = "Do no write very long sentences. The language of the simplified text should match the language of the text I provide you with. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language. Your response should only the contain the summary and nothing else. do not add any special characters, symbols or quotation marks unless the original input text contains it.";
+  const instructions = `
+  1. Do no write very long sentences.
+  2. Do not add any quotation marks, special characters or symbols unless the original input text contains it.
+  3. The language of the simplified text should match the language of the text I provide you with.
+  4. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language.
+  5. Your response should only the contain the summary and nothing else.
+  `;
   const targetAudience: Record<TargetAudiences, string> = {
     [TargetAudiences.ScientistsResearchers]: "scientists and researchers",
     [TargetAudiences.StudentsAcademics]: "students and academics",
@@ -88,11 +94,17 @@ Simplify the following text for ${audience}:
 Instructions: ${instructions}
   `;
 
-  const furtherSimplifyInstructions = "Do not write very long sentences, your response should be very brief. The language of the simplified text should match the language of the text I provide you with. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and please make your response as brief as possible. Do not add any special characters, symbols or quotation marks unless the original input text contains it";
+  const furtherSimplifyInstructions = `
+  1. Do not write very long sentences, your response should be very brief.
+  2. Do not add any quotation marks, special characters or symbols unless the original input text contains it.
+  3. The language of the simplified text should match the language of the text I provide you with.
+  4. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and please make your response as brief as possible.
+  5. Your response should only the contain the simplification of the sentence and nothing else.
+  `;
   const furtherSimplifyPrompt = `
-Simplify the following text for ${audience} based on the context provided:
+Simplify the following sentence for ${audience} based on the context provided:
 
-text to simplify: "${text.trim()}"
+sentence to simplify: "${text.trim()}"
 
 Instructions: ${furtherSimplifyInstructions}
 Context: ${context}

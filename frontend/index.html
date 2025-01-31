@@ -10,7 +10,9 @@
 <body>
   <div id="root"></div>
   <script>
-    fetch('/set-cookie', {
+    const isLocalhost = window.location.hostname === 'localhost';
+    const apiUrl = isLocalhost ? 'http://localhost:7171' : 'https://simplifymytext.org:7171';
+    fetch(`${apiUrl}/set-cookie`, {
       method: 'GET',
       credentials: 'include'
     })
