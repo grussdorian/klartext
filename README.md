@@ -6,7 +6,7 @@
 
 ## Features
 
-- *New:* Chrome extension support in development
+- *New: Chrome extension support in development*
 
 - **Text Simplification**: Input complex text, or upload a PDF, to receive a simplified output designed for easier comprehension.
 - **Targeted Audience Levels**: Customize text simplification to suit specific audience levels, ensuring that the output is aligned with the reader’s proficiency.
@@ -14,10 +14,22 @@
 - **Sentence Re-Simplification**: Select any sentence in the simplified text for additional simplification.
 - **Sidebar Word Collection**: Selected words are added to the sidebar for easy access to their definitions and synonyms, preventing duplicates.
 
+### **New features**
+
+- **Output Language selection**: Change the output language independently from the input text's language
+
+- **Website Language**: Change the language of the website.
+
+- **Website simplification**: Paste in URL of a website and get simplification of the page
+
 ## Demo
 You can checkout our demo at https://simplifymytext.org
 
-<img width="726" alt="Screenshot 2024-10-30 at 13 21 59" src="https://github.com/user-attachments/assets/122f88dc-95af-49b3-b1ec-55d403c15609">
+<img width="726" alt="demo old" src="img/demo1.png">
+
+
+---
+<img width="726" alt="demo new" src="img/demo2.png">
 
 A **tutorial video** is available at https://datashare.tu-dresden.de/s/XMqESdFefKxfJJ5
 
@@ -26,7 +38,7 @@ A **tutorial video** is available at https://datashare.tu-dresden.de/s/XMqESdFef
 - **Frontend**: React with TypeScript.
 - **Backend**: Express with TypeScript.
 - **Styling**: Tailwind CSS.
-- **APIs**: OpenAI (text simplification is done using `gpt-4`.
+- **APIs**: OpenAI (text simplification is done using `gpt-4`).
 
 ## Setup
 
