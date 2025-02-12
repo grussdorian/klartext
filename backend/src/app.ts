@@ -69,7 +69,7 @@ app.use(express.json());
 const upload = multer();
 
 // Simplify text based on user group in a chosen language
-const simplifyText = async (text: string, userGroup: TargetAudiences, outputLanguage: string, apiKey: string): Promise<string> => {
+const simplifyText = async (text: string, userGroup: TargetAudiences, outputLanguage: string, apiKey: string, context?: string): Promise<string> => {
   const instructions = `
   1. Do no write very long sentences.
   2. Do not add any quotation marks, special characters or symbols unless the original input text contains it.
