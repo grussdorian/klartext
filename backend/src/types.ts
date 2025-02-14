@@ -1,3 +1,5 @@
+import { Request } from "express";
+
 export enum TargetAudiences {
     ScientistsResearchers = "Scientists and Researchers",
     StudentsAcademics = "Students and Academics",
@@ -86,3 +88,8 @@ export enum OpenAILanguage {
     Xhosa = "xh",
     Zulu = "zu",
   }
+
+// extend the Request interface to include cookies
+export interface CustomRequest extends Request {
+    cookies: { [key: string]: string };
+}
