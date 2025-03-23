@@ -1,4 +1,3 @@
-// Language: typescript
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Alert } from "./ui/alert";
 import { Button } from "./ui/button";
 import Sidebar from "./ui/Sidebar";
+import CookieBanner from "./CookieBanner";
 
 import { audienceOptions, BASE_URL } from "../utils/constants";
 
@@ -57,6 +57,41 @@ const TextSimplifier = () => {
 
   // Localisation (i18n)
   const { t } = useTranslation();
+
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  useEffect(() => {
+    const checkCookieConsent = () => {
+      const cookieConsent = localStorage.getItem('cookieConsent');
+      const consentTimestamp = localStorage.getItem('cookieConsentTimestamp');
+      
+      if (!cookieConsent || !consentTimestamp) {
+        setShowCookieBanner(true);
+        return;
+      }
+
+      const now = new Date().getTime();
+      const timestamp = parseInt(consentTimestamp);
+      const futureTime = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+      if (now - timestamp > futureTime) {
+        setShowCookieBanner(true);
+        localStorage.removeItem('cookieConsent');
+        localStorage.removeItem('cookieConsentTimestamp');
+      }
+    };
+
+    checkCookieConsent();
+    const interval = setInterval(checkCookieConsent, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('cookieConsent', 'acknowledged');
+    localStorage.setItem('cookieConsentTimestamp', new Date().getTime().toString());
+    setShowCookieBanner(false);
+  };
 
   const handleSimplifyText = async () => {
     setIsLoading(true);
@@ -328,135 +363,142 @@ const TextSimplifier = () => {
   };
 
   return (
-    <div className="flex justify-center items-start"> {/* Ensure content is centered */}
-      <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
-        <Card className="mb-4">
-          <LanguageSelector />  
-          <CardHeader>
-            <CardTitle>{t("Klartext: AI-based Translation of Websites Into Plain Language")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InputSection
-              inputMethod={inputMethod}
-              setInputMethod={(method) => setInputMethod(method)}
-              inputText={inputText}
-              setInputText={setInputText}
-              inputFile={inputFile}
-              setInputFile={setInputFile}
-              handleUploadFile={handleUploadFile}
-              inputWebpage={inputWebpage}
-              setInputWebpage={setInputWebpage}
-              handleSimplifyWebpage={handleSimplifyWebpage}
-              handleSimplifyText={handleSimplifyText}
-              isLoading={isLoading}
-              outputLanguage={outputLanguage}
-              setOutputLanguage={setOutputLanguage}
-              audience={audience}
-              setAudience={setAudience}
-              t={t}
-            />
+    <>
+      <div className="flex justify-center items-start"> {/* Ensure content is centered */}
+        <div className="max-w-3xl w-full mx-4 p-4"> {/* Adjust max-width as needed */}
+          <Card className="mb-4">
+            <LanguageSelector />  
+            <CardHeader>
+              <CardTitle>{t("Klartext: AI-based Translation of Websites Into Plain Language")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InputSection
+                inputMethod={inputMethod}
+                setInputMethod={(method) => setInputMethod(method)}
+                inputText={inputText}
+                setInputText={setInputText}
+                inputFile={inputFile}
+                setInputFile={setInputFile}
+                handleUploadFile={handleUploadFile}
+                inputWebpage={inputWebpage}
+                setInputWebpage={setInputWebpage}
+                handleSimplifyWebpage={handleSimplifyWebpage}
+                handleSimplifyText={handleSimplifyText}
+                isLoading={isLoading}
+                outputLanguage={outputLanguage}
+                setOutputLanguage={setOutputLanguage}
+                audience={audience}
+                setAudience={setAudience}
+                t={t}
+              />
 
-            {error && <Alert variant="destructive">{error}</Alert>}
-            {simplifiedText && (
-              <>
-                <OutputSection
-                  simplifiedText={simplifiedText}
-                  selectedWord={selectedWord}
-                  handleWordClick={handleWordClick}
-                  selectedSentence={selectedSentence}
-                  handleSentenceClick={handleSentenceClick}
-                  clickable={isExpertMode}
-                />
+              {error && <Alert variant="destructive">{error}</Alert>}
+              {simplifiedText && (
+                <>
+                  <OutputSection
+                    simplifiedText={simplifiedText}
+                    selectedWord={selectedWord}
+                    handleWordClick={handleWordClick}
+                    selectedSentence={selectedSentence}
+                    handleSentenceClick={handleSentenceClick}
+                    clickable={isExpertMode}
+                  />
 
-                {/* Show Advanced Options Button */}
-                <div className="flex items-center gap-4 mt-4">
-                  <span className="text-gray-700 font-medium">{t("Expert Mode")}</span>
-                  <div
-                    onClick={toggleExpertMode}
-                    className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
-                      }`}
-                  >
-                    <span
-                      className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isExpertMode ? "translate-x-6" : ""
+                  {/* Show Advanced Options Button */}
+                  <div className="flex items-center gap-4 mt-4">
+                    <span className="text-gray-700 font-medium">{t("Expert Mode")}</span>
+                    <div
+                      onClick={toggleExpertMode}
+                      className={`relative inline-block w-12 h-6 rounded-full cursor-pointer transition-colors ${isExpertMode ? "bg-blue-600" : "bg-gray-300"
                         }`}
-                    ></span>
+                    >
+                      <span
+                        className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isExpertMode ? "translate-x-6" : ""
+                          }`}
+                      ></span>
+                    </div>
                   </div>
-                </div>
 
-                {isExpertMode && (
-                  <div className="text-gray-600 mt-2">
-                    <p>
-                      {t("In Expert Mode, click on words for definitions and synonyms, and double-click sentences for further simplification.")}
-                    </p>
-                  </div>
-                )}
+                  {isExpertMode && (
+                    <div className="text-gray-600 mt-2">
+                      <p>
+                        {t("In Expert Mode, click on words for definitions and synonyms, and double-click sentences for further simplification.")}
+                      </p>
+                    </div>
+                  )}
 
-                {/* Further Simplification Section */}
-                {isExpertMode && furtherSimplifiedText && (
-                  <div className="p-4 bg-green-50 rounded-md mt-4">
-                    <h3 className="text-lg font-semibold">{t("Further Simplified Sentence")}</h3>
-                    <p>{furtherSimplifiedText}</p>
-                    <Button onClick={handleUpdateSimplifiedText} className="mt-2">
-                      {t("Replace Selected Sentence")}
-                    </Button>
-                  </div>
-                )}
+                  {/* Further Simplification Section */}
+                  {isExpertMode && furtherSimplifiedText && (
+                    <div className="p-4 bg-green-50 rounded-md mt-4">
+                      <h3 className="text-lg font-semibold">{t("Further Simplified Sentence")}</h3>
+                      <p>{furtherSimplifiedText}</p>
+                      <Button onClick={handleUpdateSimplifiedText} className="mt-2">
+                        {t("Replace Selected Sentence")}
+                      </Button>
+                    </div>
+                  )}
 
-                {/* Conditionally render RatingSection when simplifiedText exists */}
-                <RatingSection
-                  feedback={feedback}
-                  setFeedback={setFeedback}
-                  handleFeedbackSubmit={handleFeedbackSubmit}
-                  t={t}
-                />
-              </>
-            )}
+                  {/* Conditionally render RatingSection when simplifiedText exists */}
+                  <RatingSection
+                    feedback={feedback}
+                    setFeedback={setFeedback}
+                    handleFeedbackSubmit={handleFeedbackSubmit}
+                    t={t}
+                  />
+                </>
+              )}
 
-          </CardContent>
-        </Card>
-      </div>
-
-      <Sidebar
-        isOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        sidebarEntries={sidebarEntries}
-        removeSidebarEntry={removeSidebarEntry}
-        handleWordClick={handleWordClick}
-        handleSynonymClick={(synonym: string, event: React.MouseEvent<HTMLSpanElement>) => handleSynonymClick(synonym, event)}
-        setSelectedWord={setSelectedWord}
-      />
-
-      {popupVisible && (
-        <div
-          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50"
-          style={{
-            top: popupPosition.y,
-            left: popupPosition.x,
-            width: "250px", // Fixed width to match popupWidth in handler
-            boxSizing: "border-box",
-          }}
-        >
-          <p className="mb-4 text-gray-700">
-            {t("Replace all occurrences of this word with")} {" "}
-            <span className="font-semibold">"{currentSynonym}"</span>?
-          </p>
-          <div className="flex justify-end space-x-2">
-            <button
-              onClick={() => handleUserChoice(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
-            >
-              {t("OK")}
-            </button>
-            <button
-              onClick={() => handleUserChoice(false)}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 focus:outline-none"
-            >
-              {t("Cancel")}
-            </button>
-          </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <Sidebar
+          isOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          sidebarEntries={sidebarEntries}
+          removeSidebarEntry={removeSidebarEntry}
+          handleWordClick={handleWordClick}
+          handleSynonymClick={(synonym: string, event: React.MouseEvent<HTMLSpanElement>) => handleSynonymClick(synonym, event)}
+          setSelectedWord={setSelectedWord}
+        />
+
+        {popupVisible && (
+          <div
+            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50"
+            style={{
+              top: popupPosition.y,
+              left: popupPosition.x,
+              width: "250px", // Fixed width to match popupWidth in handler
+              boxSizing: "border-box",
+            }}
+          >
+            <p className="mb-4 text-gray-700">
+              {t("Replace all occurrences of this word with")} {" "}
+              <span className="font-semibold">"{currentSynonym}"</span>?
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => handleUserChoice(true)}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
+              >
+                {t("OK")}
+              </button>
+              <button
+                onClick={() => handleUserChoice(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 focus:outline-none"
+              >
+                {t("Cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {showCookieBanner && (
+        <CookieBanner
+          onAccept={handleAcceptCookies}
+        />
       )}
-    </div>
+    </>
   );
 };
 

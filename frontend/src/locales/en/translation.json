@@ -28,6 +28,10 @@
     "Cancel": "Cancel",
     "Replace Selected Sentence": "Replace Selected Sentence",
     "Further Simplified Sentence": "Further Simplified Sentence",
-    "Select target audience": "Select target audience"
+    "Select target audience": "Select target audience",
+    "cookie": {
+      "message": "We only use essential cookies for the proper functioning of the website, we don't collect personal information. Please do not enter any personal data",
+      "okay": "Okay"
+    }
   }
   
