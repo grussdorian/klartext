@@ -183,17 +183,14 @@ const TextSimplifier = () => {
       }
 
       try {
-        const [{ data: definitionData }, { data: synonymsData }] =
-          await Promise.all([
-            axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`),
-            axios.get(`https://api.datamuse.com/words?rel_syn=${cleanWord}`),
-          ]);
+        const { data } = await axios.get(
+          `${BASE_URL}/word-info`,
+          { params: { word: cleanWord, language: outputLanguage } }
+        );
 
-        const definition =
-          definitionData[0]?.meanings[0]?.definitions[0]?.definition ||
-          "Definition not found.";
-        const synonyms = synonymsData.length
-          ? synonymsData.map((syn: any) => syn.word)
+        const definition = data.definition || "Definition not found.";
+        const synonyms = Array.isArray(data.synonyms) && data.synonyms.length
+          ? data.synonyms
           : ["No synonyms found."];
 
         setSidebarEntries((prev) => [

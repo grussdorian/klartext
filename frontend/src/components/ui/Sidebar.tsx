@@ -28,7 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       className={`fixed top-0 right-0 w-72 h-full bg-gray-50 p-4 border-l shadow-lg overflow-auto transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
         }`}
     >
-      <button onClick={toggleSidebar} className="text-primary-foreground text-black hover:text-red-700 mb-4 border border-black">
+      <button onClick={toggleSidebar} className="text-black hover:text-red-700 mb-4 border border-black">
         {t("Close Sidebar")}
       </button>
       <h3 className="font-bold mb-4">{t("Definitions & Synonyms")}</h3>
@@ -38,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <strong>{entry.word}</strong>
             <button
               onClick={() => removeSidebarEntry(entry.word)}
-              className="text-primary-foreground text-black hover:text-red-700"
+              className="text-black hover:text-red-700"
             >
               <X className="h-4 w-4" />
             </button>
