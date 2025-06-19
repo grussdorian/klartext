@@ -14,11 +14,14 @@ const getWordInfo = async (req: Request, res: Response) => {
   if (!word) {
     return res.status(400).json({ error: "No word provided" });
   }
-
   const userPrompt = `
-  Provide the following details for the word "${word}" in ${language}:
-  1. A clear and concise definition in plain language. If no definition exists, say "No definitions found."
-  2. A list of synonyms (if any). If there are no synonyms, say "No synonyms found."
+Respond ONLY with a valid JSON object in this format and your respnse should be strictly in ${language}:
+{
+  "definition": "<a clear, concise definition of '${word}' in ${language}, 15 words or fewer>",
+  "synonyms": ["<synonym1>", "<synonym2>", "..."] // Use an empty array if there are no synonyms
+}
+
+Do not include any explanation or text outside the JSON object.
 `;
 
   try {
@@ -27,18 +30,21 @@ const getWordInfo = async (req: Request, res: Response) => {
     const response = await apiClient.post('', {
         model: "gpt-4",
         messages: [{ role: "user", content: userPrompt }],
-        max_tokens: 20,
+        max_tokens: 100,
         temperature: 0
       }
     );
 
     const responseContent = response.data.choices[0]?.message?.content || "";
-    console.log("AI Response:", responseContent);
-    // Parse the AI response into a structured JSON (assuming it follows the format of the prompt)
-    const [definitionMatch, synonymsMatch] = responseContent.split("\n").map((line: string) => line.split(":")[1]?.trim());
-    const definition = definitionMatch || "Definition not found";
-    const synonyms = synonymsMatch ? synonymsMatch.split(",").map((synonym: string) => synonym.trim()) : ["No synonyms found"];
-
+    let definition = "Definition not found";
+    let synonyms: string[] = ["No synonyms found"];
+    try {
+      const json = JSON.parse(responseContent);
+      definition = json.definition || definition;
+      synonyms = Array.isArray(json.synonyms) && json.synonyms.length > 0 ? json.synonyms : synonyms;
+    } catch {
+      // fallback or error handling
+    }
     res.json({ word, definition, synonyms });
   } catch (error) {
     console.error("Error fetching word info:", error);
