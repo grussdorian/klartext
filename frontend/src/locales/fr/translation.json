@@ -28,5 +28,9 @@
   "Cancel": "Annuler",
   "Replace Selected Sentence": "Remplacer la phrase sélectionnée",
   "Further Simplified Sentence": "Phrase simplifiée davantage",
-  "Select target audience": "Sélectionner le public cible"
+  "Select target audience": "Sélectionner le public cible",
+  "cookie": {
+    "message": "Nous utilisons uniquement des cookies essentiels pour le bon fonctionnement du site web, nous ne collectons pas d'informations personnelles. Veuillez ne pas saisir de données personnelles",
+    "okay": "D'accord"
+  }
 }
