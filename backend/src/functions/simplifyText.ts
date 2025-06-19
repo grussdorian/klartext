@@ -7,7 +7,6 @@ const simplifyText = async (text: string, userGroup: TargetAudiences, outputLang
   2. Do not add any quotation marks, special characters or symbols unless the original input text contains it.
   3. If the provided text is a URL, you need to visit the URL, summarise the contents, and finally simplify the summary into plain language.
   4. If I provide you with a language, you need to first simplify the text into plain language and then translate it into the provided language.
-  Your response should only the contain the summary and nothing else.
   5. Your response should only the contain the summary and nothing else.
   `;
 
@@ -35,7 +34,7 @@ Language: ${outputLanguage}
   1. Do not write very long sentences, your response should be very brief.
   2. Do not add any quotation marks, special characters or symbols unless the original input text contains it.
   3. The language of the simplified text should match the language of the text I provide you with.
-  4. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and please make your response as brief as possible.
+  4. Try to adhere to the context provided and ensure that the simplified text is clear and concise and makes sense in the context of the original text however don't add unnecessary details and make your response as brief as possible.
   5. Your response should only the contain the simplification of the sentence and nothing else.
   `;
   const furtherSimplifyPrompt = `
