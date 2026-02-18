@@ -18,7 +18,7 @@ const LanguageSelector = () => {
 
     const languages = [
         { code: "en", label: "English" },
-        { code: "de", label: "Deutch" },
+        { code: "de", label: "Deutsch" },
         { code: "fr", label: "Français" },
         { code: "ar", label: "العربية" },
         { code: "hi", label: "हिन्दी" },
